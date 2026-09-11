@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "motion/react";
 import { Leaf, Sun, Droplets, Sparkles, ArrowRight, Play } from "lucide-react";
 
@@ -53,20 +53,19 @@ export default function App() {
   const AVATAR =
     "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059369/Avatar_Abuela_Tulun.jpg";
 
-  const fadeUp = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
-  };
-
-  const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-      },
-    },
-  };
+  useEffect(() => {
+    // Solo enviamos la notificación en entorno de producción o si no estamos en localhost para evitar spam en desarrollo
+    if (window.location.hostname !== "localhost") {
+      fetch("https://ntfy.sh/sanaen21dias_visitas", {
+        method: "POST",
+        body: "¡Alguien acaba de entrar a la página sanaen21dias.vercel.app!",
+        headers: {
+          "Title": "Nueva Visita 👀",
+          "Tags": "wave"
+        }
+      }).catch(err => console.error(err));
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] font-sans text-stone-800 selection:bg-emerald-200 overflow-x-hidden flex flex-col w-full max-w-[100vw]">
@@ -82,13 +81,7 @@ export default function App() {
         <div className="absolute top-1/2 -left-24 h-64 w-64 rounded-full bg-amber-600/5 blur-3xl"></div>
 
         <div className="mx-auto max-w-5xl relative z-10">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={fadeUp}
-            className="text-center"
-          >
+          <div className="text-center">
             <h1 className="mx-auto mb-4 max-w-4xl text-balance font-serif text-[22px] font-bold leading-[1.15] tracking-tight text-[#166534] sm:text-4xl md:text-5xl lg:text-6xl sm:leading-tight">
               Cómo Vaciar Tu Abdomen, Apagar El Dolor Articular Y Reactivar Tu Metabolismo En 21 Días... Sin Pastillas De Farmacia.
             </h1>
@@ -97,16 +90,10 @@ export default function App() {
                 Mira el vídeo abajo y transforma tu vida
               </p>
             </div>
-          </motion.div>
+          </div>
 
           {/* VSL VIDEO SECTION */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            viewport={{ once: true }}
-            className="mx-auto mb-6 w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-stone-900/5 bg-stone-900 sm:mb-8"
-          >
+          <div className="mx-auto mb-6 w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-stone-900/5 bg-stone-900 sm:mb-8">
             <div className="relative aspect-video w-full">
               <CustomVideo
                 src="https://res.cloudinary.com/nudnxkcm/video/upload/v1789085259/VSL_Leandig_Page_Abuela_Tulun.mp4"
@@ -118,7 +105,7 @@ export default function App() {
                 }}
               />
             </div>
-          </motion.div>
+          </div>
 
           {showHeroButton && (
             <motion.div
@@ -147,26 +134,20 @@ export default function App() {
       {/* SECCIÓN 2: EL PROBLEMA */}
       <section className="bg-white px-4 pt-6 pb-10 sm:px-6 md:pt-8 md:pb-16">
         <div className="mx-auto max-w-3xl">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={staggerContainer}
-            className="space-y-4 sm:space-y-5 text-base leading-relaxed text-stone-700 sm:text-lg md:text-xl md:leading-loose"
-          >
-            <motion.p variants={fadeUp}>
+          <div className="space-y-4 sm:space-y-5 text-base leading-relaxed text-stone-700 sm:text-lg md:text-xl md:leading-loose">
+            <p>
               Estás agotada. Agotada de hacer dietas que te matan de hambre y ver que la báscula no se mueve. Cansada de despertar con las manos hinchadas, pesadez en las piernas y un dolor de espalda que no te deja disfrutar tu día.
-            </motion.p>
-            <motion.p variants={fadeUp} className="font-semibold text-stone-900">
+            </p>
+            <p className="font-semibold text-stone-900">
               Pero necesito que leas esto con atención: No es tu culpa.
-            </motion.p>
-            <motion.p variants={fadeUp}>
+            </p>
+            <p>
               Esa hinchazón abdominal y esa fatiga crónica no son por "comer de más" ni por "falta de voluntad". Es tu hígado pidiendo auxilio y una severa resistencia a la insulina bloqueando tu metabolismo.
-            </motion.p>
-            <motion.p variants={fadeUp}>
+            </p>
+            <p>
               La industria farmacéutica quiere que creas que a tu edad el dolor es normal, para mantenerte atada a sus analgésicos. Pero tu cuerpo solo necesita un botón de reinicio.
-            </motion.p>
-          </motion.div>
+            </p>
+          </div>
         </div>
       </section>
 
@@ -176,17 +157,11 @@ export default function App() {
 
           {/* TESTIMONIOS */}
           <div className="mb-12 sm:mb-16">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-100px" }}
-              variants={fadeUp}
-              className="text-center mb-6 sm:mb-8"
-            >
+            <div className="text-center mb-6 sm:mb-8">
               <h2 className="mx-auto max-w-2xl font-serif text-2xl font-bold leading-tight text-[#FDFBF7] sm:text-3xl md:text-4xl text-balance">
                 Ellas ya desintoxicaron su cuerpo y apagaron el dolor
               </h2>
-            </motion.div>
+            </div>
 
             {/* Slider móvil / Grid en desktop para videos 9:16 */}
             <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -206,51 +181,30 @@ export default function App() {
           </div>
 
           <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true, margin: "-100px" }}
-              className="relative mx-auto w-full max-w-[260px] sm:max-w-sm lg:mx-0 lg:max-w-none"
-            >
+            <div className="relative mx-auto w-full max-w-[260px] sm:max-w-sm lg:mx-0 lg:max-w-none">
               <div className="absolute -inset-3 sm:-inset-4 rounded-2xl bg-emerald-800/50 blur-lg"></div>
               <img
                 src={AVATAR}
                 alt="Autora"
                 className="relative aspect-[4/5] w-full rounded-2xl object-cover shadow-2xl shadow-black/40 ring-1 ring-white/10"
               />
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-100px" }}
-              variants={staggerContainer}
-              className="space-y-4 sm:space-y-6 text-center lg:text-left"
-            >
-              <motion.h2
-                variants={fadeUp}
-                className="font-serif text-2xl font-bold leading-tight text-[#FDFBF7] sm:text-3xl md:text-4xl"
-              >
+            <div className="space-y-4 sm:space-y-6 text-center lg:text-left">
+              <h2 className="font-serif text-2xl font-bold leading-tight text-[#FDFBF7] sm:text-3xl md:text-4xl">
                 El Método Que La Industria Médica Intenta Ocultar
-              </motion.h2>
+              </h2>
 
-              <motion.p
-                variants={fadeUp}
-                className="text-base leading-relaxed text-emerald-100 sm:text-lg md:text-xl"
-              >
+              <p className="text-base leading-relaxed text-emerald-100 sm:text-lg md:text-xl">
                 Las dietas de moda fallan porque intentan quemar grasa en un cuerpo intoxicado. Es como intentar limpiar el piso con agua sucia. Para volver a sentirte ligera, primero debes destapar tus órganos filtro.
-              </motion.p>
+              </p>
 
-              <motion.div
-                variants={fadeUp}
-                className="rounded-xl border border-emerald-700 bg-emerald-900/50 p-4 sm:p-5 md:p-6 backdrop-blur-sm text-center sm:text-left"
-              >
+              <div className="rounded-xl border border-emerald-700 bg-emerald-900/50 p-4 sm:p-5 md:p-6 backdrop-blur-sm text-center sm:text-left">
                 <p className="text-[15px] sm:text-lg font-bold text-amber-400 leading-snug text-balance">
                   El método ancestral para deshinchar tu vientre, frenar el dolor y reactivar tu metabolismo.
                 </p>
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -258,27 +212,15 @@ export default function App() {
       {/* SECCIÓN 4: ENTREGABLES */}
       <section className="px-4 py-10 sm:px-6 md:py-16">
         <div className="mx-auto max-w-5xl">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={fadeUp}
-            className="mb-6 text-center sm:mb-10"
-          >
+          <div className="mb-6 text-center sm:mb-10">
             <h2 className="font-serif text-2xl font-bold text-[#166534] sm:text-3xl md:text-4xl">
               Tu Transformación<br />Paso a Paso
             </h2>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={staggerContainer}
-            className="grid gap-4 sm:gap-5 lg:gap-6 md:grid-cols-2"
-          >
+          <div className="grid gap-4 sm:gap-5 lg:gap-6 md:grid-cols-2">
             {/* Item 1 */}
-            <motion.div variants={fadeUp} className="group rounded-2xl bg-white p-5 sm:p-6 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10">
+            <div className="group rounded-2xl bg-white p-5 sm:p-6 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10">
               <div className="mb-3 sm:mb-4 inline-flex rounded-xl bg-emerald-100 p-3 text-[#166534]">
                 <Droplets className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
@@ -289,10 +231,10 @@ export default function App() {
               <p className="text-sm sm:text-base text-stone-600">
                 Expulsa el líquido retenido y la hinchazón severa. Volverás a abrocharte el pantalón sin que te apriete.
               </p>
-            </motion.div>
+            </div>
 
             {/* Item 2 */}
-            <motion.div variants={fadeUp} className="group rounded-2xl bg-white p-5 sm:p-6 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10">
+            <div className="group rounded-2xl bg-white p-5 sm:p-6 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10">
               <div className="mb-3 sm:mb-4 inline-flex rounded-xl bg-emerald-100 p-3 text-[#166534]">
                 <Sun className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
@@ -303,10 +245,10 @@ export default function App() {
               <p className="text-sm sm:text-base text-stone-600">
                 Usa las combinaciones exactas para apagar la resistencia a la insulina y derretir la grasa estancada.
               </p>
-            </motion.div>
+            </div>
 
             {/* Item 3 */}
-            <motion.div variants={fadeUp} className="group rounded-2xl bg-white p-5 sm:p-6 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10 sm:col-span-2 md:col-span-1 lg:col-span-2 lg:max-w-xl lg:mx-auto lg:w-full">
+            <div className="group rounded-2xl bg-white p-5 sm:p-6 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10 sm:col-span-2 md:col-span-1 lg:col-span-2 lg:max-w-xl lg:mx-auto lg:w-full">
               <div className="mb-3 sm:mb-4 inline-flex rounded-xl bg-emerald-100 p-3 text-[#166534]">
                 <Leaf className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
@@ -317,21 +259,15 @@ export default function App() {
               <p className="text-sm sm:text-base text-stone-600">
                 Recetas antiinflamatorias intensivas que apagan el fuego en tus rodillas, lumbares y articulaciones.
               </p>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* SECCIÓN 5: CIERRE Y CTA FINAL */}
       <section id="checkout" className="bg-[#FDFBF7] px-4 py-10 sm:px-6 md:py-16 border-t border-stone-200">
         <div className="mx-auto max-w-4xl text-center">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={fadeUp}
-            className="flex flex-col items-center"
-          >
+          <div className="flex flex-col items-center">
             {/* CAJA DE OFERTA */}
             <div className="w-full max-w-3xl rounded-3xl bg-white p-6 sm:p-10 shadow-2xl ring-1 ring-stone-200 mb-8 sm:mb-10 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600"></div>
@@ -382,7 +318,7 @@ export default function App() {
             <p className="max-w-2xl text-lg sm:text-xl leading-relaxed text-stone-700 md:text-2xl text-balance">
               La decisión es tuya. Puedes seguir despertando mañana con el mismo dolor articular y la misma frustración frente al espejo... O puedes unirte a las mujeres que ya están usando la medicina de la tierra.
             </p>
-          </motion.div>
+          </div>
         </div>
       </section>
     </div>
