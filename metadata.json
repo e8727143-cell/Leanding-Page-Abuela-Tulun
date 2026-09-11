@@ -1,0 +1,8 @@
+{
+  "name": "Desintoxica Tu Cuerpo en 21 Días",
+  "description": "El método ancestral para deshinchar tu vientre, frenar el dolor y reactivar tu metabolismo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
