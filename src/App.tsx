@@ -44,7 +44,6 @@ const CustomVideo = ({ src, className, onTimeUpdate }: { src: string; className?
 
 export default function App() {
   const [showHeroButton, setShowHeroButton] = useState(false);
-  const [email, setEmail] = useState("");
   const MOCKUP_BOOK =
     "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059099/mockup_libro_desintoxica_tu_cuerpo_en_21_dias-Photoroom.png";
   const MOCKUP_TABLET =
@@ -128,14 +127,10 @@ export default function App() {
               transition={{ duration: 0.6 }}
               className="flex justify-center w-full"
             >
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  const baseUrl = "https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf";
-                  const encodedEmail = encodeURIComponent(email);
-                  const url = email ? `${baseUrl}&email=${encodedEmail}&EMAIL=${encodedEmail}&emailConfirmation=${encodedEmail}&EMAIL_CONFIRMATION=${encodedEmail}` : baseUrl;
-                  window.open(url, "_blank");
-                }}
+              <a
+                href="https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="group relative inline-flex w-full items-center justify-center gap-1.5 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-3 sm:px-6 py-4 sm:py-5 text-[14px] sm:text-lg font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-10 md:text-xl text-center leading-tight"
               >
                 <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
@@ -143,7 +138,7 @@ export default function App() {
                 </span>
                 <span className="flex-1">QUIERO DESENTOXICAR MI CUERPO</span>
                 <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 transition-transform group-hover:translate-x-1 shrink-0" />
-              </button>
+              </a>
             </motion.div>
           )}
         </div>
@@ -366,37 +361,17 @@ export default function App() {
                 </span>
               </div>
 
-              <div className="w-full flex flex-col items-center">
-                <div className="mb-4 flex w-full max-w-sm flex-col items-center mx-auto">
-                  <input
-                    type="email"
-                    placeholder="Ingresa tu mejor correo..."
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-full border-2 border-stone-200 px-5 py-3 sm:py-4 text-center text-stone-800 placeholder:text-stone-400 focus:border-[#15803d] focus:outline-none focus:ring-2 focus:ring-[#15803d]/30 transition-all text-base sm:text-lg"
-                    required
-                  />
-                </div>
-
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (!email) {
-                      alert("Por favor, ingresa tu correo electrónico antes de continuar.");
-                      return;
-                    }
-                    const encodedEmail = encodeURIComponent(email);
-                    const url = `https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf&email=${encodedEmail}&EMAIL=${encodedEmail}&emailConfirmation=${encodedEmail}&EMAIL_CONFIRMATION=${encodedEmail}`;
-                    window.open(url, "_blank");
-                  }}
-                  className="group relative inline-flex w-full items-center justify-center gap-2 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-4 sm:px-6 py-4 sm:py-5 text-[15px] sm:text-xl font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-14 whitespace-nowrap"
-                >
-                  <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
-                    <div className="relative h-full w-12 bg-white/20" />
-                  </span>
-                  <span>QUIERO ADQUIRIR AHORA</span>
-                </button>
-              </div>
+              <a
+                href="https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative inline-flex w-full items-center justify-center gap-2 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-4 sm:px-6 py-4 sm:py-5 text-[15px] sm:text-xl font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-14 whitespace-nowrap"
+              >
+                <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
+                  <div className="relative h-full w-12 bg-white/20" />
+                </span>
+                <span>QUIERO ADQUIRIR AHORA</span>
+              </a>
               
               <p className="mt-6 text-xs sm:text-sm text-stone-500 font-medium">
                 🔒 Pago 100% seguro. Acceso inmediato al finalizar tu orden.
