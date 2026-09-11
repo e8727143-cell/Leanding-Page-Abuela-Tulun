@@ -132,7 +132,8 @@ export default function App() {
                 onClick={(e) => {
                   e.preventDefault();
                   const baseUrl = "https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf";
-                  const url = email ? `${baseUrl}&email=${encodeURIComponent(email)}` : baseUrl;
+                  const encodedEmail = encodeURIComponent(email);
+                  const url = email ? `${baseUrl}&email=${encodedEmail}&EMAIL=${encodedEmail}&emailConfirmation=${encodedEmail}&EMAIL_CONFIRMATION=${encodedEmail}` : baseUrl;
                   window.open(url, "_blank");
                 }}
                 className="group relative inline-flex w-full items-center justify-center gap-1.5 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-3 sm:px-6 py-4 sm:py-5 text-[14px] sm:text-lg font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-10 md:text-xl text-center leading-tight"
@@ -384,7 +385,8 @@ export default function App() {
                       alert("Por favor, ingresa tu correo electrónico antes de continuar.");
                       return;
                     }
-                    const url = `https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf&email=${encodeURIComponent(email)}`;
+                    const encodedEmail = encodeURIComponent(email);
+                    const url = `https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf&email=${encodedEmail}&EMAIL=${encodedEmail}&emailConfirmation=${encodedEmail}&EMAIL_CONFIRMATION=${encodedEmail}`;
                     window.open(url, "_blank");
                   }}
                   className="group relative inline-flex w-full items-center justify-center gap-2 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-4 sm:px-6 py-4 sm:py-5 text-[15px] sm:text-xl font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-14 whitespace-nowrap"
