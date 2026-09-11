@@ -17,6 +17,35 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      function notificarVisitaSana21() {
+        // Evita enviarte notificaciones push mientras pruebas localmente
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") return;
+
+        // Código UUID matemáticamente imposible de adivinar para proteger tu privacidad
+        const MI_CANAL_SECRETO = "sana21dias-visitas-7f9a2b8c-4e1d-93ab"; 
+
+        const pagina = window.location.pathname;
+        const idioma = navigator.language || "Desconocido";
+
+        fetch(`https://ntfy.sh/${MI_CANAL_SECRETO}`, {
+          method: "POST",
+          body: `👀 Un usuario entró a: ${pagina}\n🌐 Idioma del navegador: ${idioma}`,
+          headers: {
+            "X-Title": "🚨 ¡Nueva Visita en Tiempo Real!",
+            "X-Priority": "5", // Máxima prioridad: Fuerza a tu teléfono a sonar e iluminar la pantalla
+            "X-Tags": "rocket,eyes"
+          }
+        }).catch(err => console.error("Error al disparar la notificación:", err));
+      }
+
+      // Se ejecuta de inmediato apenas el usuario carga la web por completo
+      if (document.readyState === "complete") {
+        notificarVisitaSana21();
+      } else {
+        window.addEventListener("load", notificarVisitaSana21);
+      }
+    </script>
   </body>
 </html>
 

@@ -53,20 +53,6 @@ export default function App() {
   const AVATAR =
     "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059369/Avatar_Abuela_Tulun.jpg";
 
-  useEffect(() => {
-    // Solo enviamos la notificación en entorno de producción o si no estamos en localhost para evitar spam en desarrollo
-    if (window.location.hostname !== "localhost") {
-      fetch("https://ntfy.sh/sanaen21dias_visitas", {
-        method: "POST",
-        body: "¡Alguien acaba de entrar a la página sanaen21dias.vercel.app!",
-        headers: {
-          "Title": "Nueva Visita 👀",
-          "Tags": "wave"
-        }
-      }).catch(err => console.error(err));
-    }
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#FDFBF7] font-sans text-stone-800 selection:bg-emerald-200 overflow-x-hidden flex flex-col w-full max-w-[100vw]">
       {/* BANNER SUPERIOR DE ADVERTENCIA */}
