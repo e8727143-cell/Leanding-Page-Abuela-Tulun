@@ -32,9 +32,9 @@
           method: "POST",
           body: `👀 Un usuario entró a: ${pagina}\n🌐 Idioma del navegador: ${idioma}`,
           headers: {
-            "X-Title": "🚨 ¡Nueva Visita en Tiempo Real!",
+            "X-Title": "Nueva Visita en Tiempo Real",
             "X-Priority": "5", // Máxima prioridad: Fuerza a tu teléfono a sonar e iluminar la pantalla
-            "X-Tags": "rocket,eyes"
+            "X-Tags": "rotating_light,rocket,eyes"
           }
         }).catch(err => console.error("Error al disparar la notificación:", err));
       }
