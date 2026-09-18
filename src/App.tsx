@@ -8,7 +8,6 @@ import { motion } from "motion/react";
 import { Leaf, Sun, Droplets, Sparkles, ArrowRight, Play } from "lucide-react";
 
 const CustomVideo = ({ src, className, onTimeUpdate }: { src: string; className?: string; onTimeUpdate?: any }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   return (
@@ -19,31 +18,109 @@ const CustomVideo = ({ src, className, onTimeUpdate }: { src: string; className?
         className={className}
         controls
         preload="metadata"
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onEnded={() => setIsPlaying(false)}
         onTimeUpdate={onTimeUpdate}
       />
-      {!isPlaying && (
-        <div 
-          className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer transition-all hover:bg-black/10"
-          onClick={() => {
-            if (videoRef.current) {
-              videoRef.current.play();
-            }
-          }}
-        >
-          <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-[#15803d] text-white shadow-[0_0_30px_rgb(21,128,61,0.5)] transition-transform hover:scale-110">
-            <Play className="h-8 w-8 sm:h-10 sm:w-10 ml-1 sm:ml-1.5" fill="currentColor" />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
 export default function App() {
   const [showHeroButton, setShowHeroButton] = useState(false);
+  const [viewers, setViewers] = useState(457);
+  const [timeLeft, setTimeLeft] = useState(1800);
+  const [showExitPopup, setShowExitPopup] = useState(false);
+
+  useEffect(() => {
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (e.clientY <= 0 && !showExitPopup) {
+        setShowExitPopup(true);
+      }
+    };
+
+    document.addEventListener("mouseleave", handleMouseLeave);
+    return () => document.removeEventListener("mouseleave", handleMouseLeave);
+  }, [showExitPopup]);
+
+  useEffect(() => {
+    if (showHeroButton) return;
+    const interval = setInterval(() => {
+      setViewers(prev => {
+        let change = Math.floor(Math.random() * 11) - 5;
+        let next = prev + change;
+        if (next > 500) next = 500;
+        if (next < 410) next = 410;
+        return next;
+      });
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [showHeroButton]);
+
+  useEffect(() => {
+    if (!showHeroButton) return;
+    const interval = setInterval(() => {
+      setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [showHeroButton]);
+
+  const [commentsData, setCommentsData] = useState<{id: number, name: string, text: string, time: string, avatar: string}[]>([]);
+  const [isTyping, setIsTyping] = useState(true);
+
+  useEffect(() => {
+    // Ensure no duplicates in the avatars list (removed the duplicate URL)
+    const AVATARS = Array.from(new Set([
+      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688455/Woman_taking_profile_selfie_20260917202911.jpg",
+      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688455/Woman_taking_home_selfie_20260917202825.jpg",
+      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688455/Woman_taking_selfie_20260917202949.jpg",
+      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688454/Woman_taking_selfie_20260917203334.jpg",
+      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688454/Woman_taking_spontaneous_selfie_20260917203407.jpg",
+      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688455/Woman_taking_selfie_indoors_20260917203140.jpg",
+      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688454/Woman_taking_selfie_profile_picture_20260917202415.jpg"
+    ]));
+
+    const baseComments = [
+      { id: 1, name: "María Fernanda", text: "Llevo 3 días y ya no me duelen las rodillas, es increíble." },
+      { id: 2, name: "Carmen Rosa", text: "Al fin algo que no son pastillas. Empecé hoy." },
+      { id: 3, name: "Teresa G.", text: "Pensé que era mentira pero ya bajé 2 tallas de pantalón, me siento super desinflamada." },
+      { id: 4, name: "Luz Elena", text: "Alguien más sintió alivio en la espalda la primera semana?" }
+    ];
+
+    const shuffledAvatars = [...AVATARS].sort(() => 0.5 - Math.random());
+    
+    let currentTime = Math.floor(Math.random() * 3) + 1;
+    
+    const initializedComments = baseComments.map((c, index) => {
+      // Direct access guarantees uniqueness since shuffledAvatars has 7 unique elements
+      const avatar = shuffledAvatars[index];
+      const timeStr = `Hace ${currentTime} min`;
+      currentTime += Math.floor(Math.random() * 10) + 4;
+      return { ...c, avatar, time: timeStr };
+    });
+
+    setCommentsData(initializedComments);
+    setIsTyping(true);
+
+    const typingTimer = setTimeout(() => {
+      setIsTyping(false);
+      setCommentsData(prev => {
+        // Prevent double injection in React strict mode
+        if (prev.some(c => c.id === 5)) return prev;
+        
+        const newComment = {
+          id: 5,
+          name: "Patricia M.",
+          text: "¡Yo también quiero empezar! Acabo de ver el video y me identifico muchísimo.",
+          time: "Justo ahora",
+          // The 5th unique avatar from the list
+          avatar: shuffledAvatars[baseComments.length]
+        };
+        return [...prev, newComment];
+      });
+    }, Math.floor(Math.random() * 8000) + 7000); // Between 7 and 15 seconds
+
+    return () => clearTimeout(typingTimer);
+  }, []);
+
   const MOCKUP_BOOK =
     "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059099/mockup_libro_desintoxica_tu_cuerpo_en_21_dias-Photoroom.png";
   const MOCKUP_TABLET =
@@ -55,9 +132,39 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] font-sans text-stone-800 selection:bg-emerald-200 overflow-x-hidden flex flex-col w-full max-w-[100vw]">
+      {showExitPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 md:p-10">
+            <button 
+              onClick={() => setShowExitPopup(false)}
+              className="absolute right-4 top-4 text-stone-400 hover:text-stone-600"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+            <div className="text-center">
+              <h2 className="mb-4 font-serif text-2xl font-bold text-red-600 md:text-3xl">¡ESPERA!</h2>
+              <p className="mb-6 text-base text-stone-600 md:text-lg leading-relaxed">
+                Hija, de verdad quiero ayudarte y esta oferta es exclusiva para quien miró el vídeo, no se repetirá más. Cómo última oferta puedes llevarte el libro digital con todas mis recetas por apenas <span className="font-bold text-stone-900">$9.97</span>
+              </p>
+              <a
+                href="https://pay.hotmart.com/W105526885V?off=82bvewu1&checkoutMode=10"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative inline-flex w-full items-center justify-center overflow-hidden rounded-full bg-red-600 px-6 py-4 text-sm font-bold text-white shadow-[0_8px_30px_rgb(220,38,38,0.3)] transition-all hover:scale-105 hover:bg-red-700 hover:shadow-[0_8px_40px_rgb(220,38,38,0.4)] active:scale-95 sm:text-base md:text-lg text-center"
+              >
+                <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
+                  <div className="relative h-full w-8 bg-white/20" />
+                </span>
+                <span>APROVECHAR OFERTA EXCLUSIVA</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* BANNER SUPERIOR DE ADVERTENCIA */}
       <div className="bg-amber-400 px-4 py-2 text-center text-sm font-bold tracking-wide text-amber-950 md:text-base">
-        ATENCIÓN: Para mujeres de más de 40 años que sienten que su cuerpo "retiene todo"
+        ATENCIÓN! Las farmacias no quieren que sepas esto. Este contenido es exclusivo para pocas personas.
       </div>
 
       {/* SECCIÓN 1: HERO */}
@@ -72,14 +179,14 @@ export default function App() {
               Cómo Vaciar Tu Abdomen, Apagar El Dolor Articular Y Reactivar Tu Metabolismo En 21 Días... Sin Pastillas De Farmacia.
             </h1>
             <div className="mt-4 mb-6 sm:mb-8 flex justify-center">
-              <p className="inline-block rounded-lg bg-amber-400 px-4 py-2 text-sm sm:text-base md:text-lg font-bold text-amber-950 whitespace-nowrap shadow-sm">
-                Mira el vídeo abajo y transforma tu vida
+              <p className="inline-block rounded-lg bg-amber-400 px-4 py-2 text-sm sm:text-base md:text-lg font-bold text-amber-950 shadow-sm text-balance">
+                Mira el vídeo abajo que puede desaparecer en cualquier momento.
               </p>
             </div>
           </div>
 
           {/* VSL VIDEO SECTION */}
-          <div className="mx-auto mb-6 w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-stone-900/5 bg-stone-900 sm:mb-8">
+          <div className="mx-auto mb-6 w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-stone-900/5 bg-stone-900">
             <div className="relative aspect-video w-full">
               <CustomVideo
                 src="https://res.cloudinary.com/nudnxkcm/video/upload/v1789085259/VSL_Leandig_Page_Abuela_Tulun.mp4"
@@ -93,25 +200,110 @@ export default function App() {
             </div>
           </div>
 
+          {!showHeroButton && (
+            <div className="mx-auto max-w-4xl w-full px-2 sm:px-0 mb-8 sm:mb-12 transition-opacity duration-500">
+              <div className="flex justify-center items-center gap-2 mb-6 text-stone-600 font-medium text-sm sm:text-base">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                <span className="text-red-600 font-bold">{viewers}</span> personas están viendo este video
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6 text-left">
+                <h3 className="text-lg font-bold text-stone-800 mb-4 border-b border-stone-100 pb-2">Comentarios (14)</h3>
+                <div className="space-y-4">
+                  {commentsData.map(c => (
+                    <div key={c.id} className="flex gap-3">
+                      <img 
+                        src={c.avatar} 
+                        alt={c.name} 
+                        className="h-10 w-10 shrink-0 rounded-full object-cover shadow-sm border border-stone-200"
+                      />
+                      <div className="flex flex-col">
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-bold text-sm text-[#3b5998]">{c.name}</span>
+                          <span className="text-xs text-stone-400">{c.time}</span>
+                        </div>
+                        <p className="text-sm text-stone-700 mt-0.5">{c.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {isTyping && (
+                  <div className="flex gap-3 items-center mt-6 p-3 bg-stone-50 rounded-xl border border-stone-100">
+                    <div className="flex gap-1 bg-stone-200 px-3 py-2 rounded-full items-center">
+                      <div className="w-1.5 h-1.5 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                      <div className="w-1.5 h-1.5 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                      <div className="w-1.5 h-1.5 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                    </div>
+                    <span className="text-xs font-medium text-stone-500 italic">Alguien está escribiendo un comentario...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {showHeroButton && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="flex justify-center w-full"
+              className="flex flex-col items-center w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl ring-2 ring-red-500 overflow-hidden relative"
             >
-              <a
-                href="https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group relative inline-flex w-full items-center justify-center gap-1.5 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-3 sm:px-6 py-4 sm:py-5 text-[14px] sm:text-lg font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-10 md:text-xl text-center leading-tight"
-              >
-                <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
-                  <div className="relative h-full w-8 bg-white/20" />
-                </span>
-                <span className="flex-1">QUIERO DESENTOXICAR MI CUERPO</span>
-                <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 transition-transform group-hover:translate-x-1 shrink-0" />
-              </a>
+              <div className="w-full bg-red-600 py-3 text-center">
+                <p className="text-white font-bold text-sm sm:text-base tracking-wide px-4">
+                  🚨 OFERTA EXCLUSIVA PARA QUIEN ESTÁ VIENDO EL VÍDEO 🚨
+                </p>
+              </div>
+
+              <div className="p-6 sm:p-10 flex flex-col items-center w-full">
+                <div className="flex flex-col items-center mb-6 w-full">
+                  <p className="text-stone-500 font-medium text-sm mb-2 uppercase tracking-widest">La oferta expira en</p>
+                  <div className="flex gap-2 sm:gap-3 items-center justify-center">
+                    <div className="flex flex-col items-center">
+                      <div className="bg-stone-900 text-white font-mono font-bold text-4xl sm:text-6xl px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
+                        {Math.floor(timeLeft / 60).toString().padStart(2, '0')}
+                      </div>
+                      <span className="text-[10px] sm:text-xs text-stone-400 font-medium mt-1 uppercase tracking-widest">Minutos</span>
+                    </div>
+                    <span className="text-stone-900 font-bold text-4xl sm:text-5xl -mt-4 sm:-mt-5 animate-pulse">:</span>
+                    <div className="flex flex-col items-center">
+                      <div className="bg-stone-900 text-white font-mono font-bold text-4xl sm:text-6xl px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
+                        {(timeLeft % 60).toString().padStart(2, '0')}
+                      </div>
+                      <span className="text-[10px] sm:text-xs text-stone-400 font-medium mt-1 uppercase tracking-widest">Segundos</span>
+                    </div>
+                  </div>
+                </div>
+
+                <img 
+                  src={MOCKUP_PHONE} 
+                  alt="Mockup Celular" 
+                  className="w-32 sm:w-48 object-contain drop-shadow-2xl mb-6"
+                />
+
+                <div className="mb-8 flex flex-col items-center text-center">
+                  <span className="mb-1 text-base font-medium text-stone-500 line-through sm:text-lg">Valor normal: $49.97</span>
+                  <span className="text-4xl font-extrabold tracking-tight text-[#166534] sm:text-5xl md:text-6xl">
+                    Ahora solo $11.97
+                  </span>
+                </div>
+
+                <a
+                  href="https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative inline-flex w-full items-center justify-center gap-1.5 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-3 sm:px-6 py-4 sm:py-5 text-[14px] sm:text-lg font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 text-center leading-tight whitespace-nowrap"
+                >
+                  <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
+                    <div className="relative h-full w-8 bg-white/20" />
+                  </span>
+                  <span>QUIERO ADQUIRIR AHORA</span>
+                  <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 transition-transform group-hover:translate-x-1 shrink-0" />
+                </a>
+              </div>
             </motion.div>
           )}
         </div>
@@ -279,7 +471,7 @@ export default function App() {
               <div className="mb-6 flex flex-col items-center">
                 <span className="mb-1 text-base font-medium text-stone-500 line-through sm:text-lg">Valor normal: $47.00</span>
                 <span className="text-4xl font-extrabold tracking-tight text-[#166534] sm:text-5xl md:text-6xl">
-                  Hoy solo $14.97
+                  Ahora solo $11.97
                 </span>
               </div>
 
