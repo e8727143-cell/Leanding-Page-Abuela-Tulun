@@ -1,6 +1,23 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", sans-serif;
-  --font-serif: "Playfair Display", serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-serif: "Merriweather", "Playfair Display", Georgia, serif;
+  --font-display: "Playfair Display", "Merriweather", Georgia, serif;
+}
+
+body {
+  color: #212121;
+  background-color: #FDFBF7;
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.65;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+p, li, span {
+  font-style: normal;
 }

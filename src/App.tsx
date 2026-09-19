@@ -9,7 +9,21 @@ import { Leaf, Sun, Droplets, Sparkles, ArrowRight, Play } from "lucide-react";
 import { useGeoCurrency } from "./hooks/useGeoCurrency";
 import { useTelegramTracker } from "./hooks/useTelegramTracker";
 
-const CustomVideo = ({ src, className, onTimeUpdate }: { src: string; className?: string; onTimeUpdate?: any }) => {
+const CustomVideo = ({
+  src,
+  className,
+  onTimeUpdate,
+  onPlay,
+  onPause,
+  onEnded
+}: {
+  src: string;
+  className?: string;
+  onTimeUpdate?: any;
+  onPlay?: () => void;
+  onPause?: (e: any) => void;
+  onEnded?: () => void;
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   return (
@@ -21,6 +35,9 @@ const CustomVideo = ({ src, className, onTimeUpdate }: { src: string; className?
         controls
         preload="metadata"
         onTimeUpdate={onTimeUpdate}
+        onPlay={onPlay}
+        onPause={onPause}
+        onEnded={onEnded}
       />
     </div>
   );
@@ -30,7 +47,12 @@ export default function App() {
   const [showHeroButton, setShowHeroButton] = useState(false);
   const [timeLeft, setTimeLeft] = useState(1800);
   const geo = useGeoCurrency();
-  const { trackCheckoutClick } = useTelegramTracker(geo.countryName);
+  const {
+    trackCheckoutClick,
+    trackVideoPlay,
+    trackVideoPause,
+    trackVideoEnded
+  } = useTelegramTracker(geo.countryName);
 
   useEffect(() => {
     if (!showHeroButton) return;
@@ -50,10 +72,10 @@ export default function App() {
     "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059369/Avatar_Abuela_Tulun.jpg";
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] font-sans text-stone-800 selection:bg-emerald-200 overflow-x-hidden flex flex-col w-full max-w-[100vw]">
+    <div className="min-h-screen bg-[#FDFBF7] font-sans text-[#212121] selection:bg-emerald-200 overflow-x-hidden flex flex-col w-full max-w-[100vw]">
       {/* BANNER SUPERIOR DE ADVERTENCIA */}
-      <div className="bg-amber-400 px-4 py-2 text-center text-sm font-bold tracking-wide text-amber-950 md:text-base">
-        ATENCIÓN: Para la mujer que siente que su propio cuerpo se convirtió en su enemigo.
+      <div className="bg-amber-400 px-4 py-2.5 text-center text-base font-bold tracking-normal text-amber-950 sm:text-lg">
+        Atención: Para la mujer que siente que su propio cuerpo se convirtió en su enemigo.
       </div>
 
       {/* SECCIÓN 1: HERO */}
@@ -65,17 +87,17 @@ export default function App() {
         <div className="mx-auto max-w-5xl relative z-10">
           <div className="text-center">
             <h1 className="mx-auto mb-3 max-w-4xl font-serif font-bold tracking-tight text-[#166534]">
-              <span className="block text-[20px] leading-[1.25] sm:text-3xl md:text-4xl lg:text-5xl sm:leading-tight">
+              <span className="block text-[22px] leading-[1.3] sm:text-3xl md:text-4xl lg:text-5xl sm:leading-tight font-serif">
                 <span className="block">Cómo Desinflamar Tu Vientre,</span>
                 <span className="block">Apagar El Dolor Articular</span>
                 <span className="block">Y Recuperar Tu Energía En 21 Días...</span>
               </span>
-              <span className="mt-2 sm:mt-3 block text-sm xs:text-base sm:text-2xl md:text-3xl font-bold whitespace-nowrap text-[#166534]">
+              <span className="mt-5 sm:mt-7 block text-xl sm:text-2xl md:text-3xl lg:text-4xl font-serif font-extrabold text-[#166534]">
                 Volviendo A La Sabiduría De Antes.
               </span>
             </h1>
-            <div className="mt-3 mb-4 sm:mb-6 flex justify-center">
-              <p className="inline-block rounded-lg bg-amber-400 px-4 py-2 text-sm sm:text-base md:text-lg font-bold text-amber-950 shadow-sm text-balance">
+            <div className="mt-4 mb-4 sm:mb-6 flex justify-center">
+              <p className="inline-block rounded-xl bg-amber-400 px-5 py-2.5 text-base sm:text-lg font-bold text-amber-950 shadow-sm text-balance">
                 Mira el vídeo abajo que puede desaparecer en cualquier momento.
               </p>
             </div>
@@ -87,6 +109,9 @@ export default function App() {
               <CustomVideo
                 src="https://res.cloudinary.com/nudnxkcm/video/upload/v1789085259/VSL_Leandig_Page_Abuela_Tulun.mp4"
                 className="h-full w-full object-cover"
+                onPlay={trackVideoPlay}
+                onPause={(e: any) => trackVideoPause(e.target.currentTime)}
+                onEnded={trackVideoEnded}
                 onTimeUpdate={(e: any) => {
                   if (e.target.currentTime >= 54 && !showHeroButton) {
                     setShowHeroButton(true);
@@ -104,27 +129,27 @@ export default function App() {
               className="mt-4 sm:mt-6 flex flex-col items-center w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl ring-2 ring-red-500 overflow-hidden relative"
             >
               <div className="w-full bg-red-600 py-3 text-center">
-                <p className="text-white font-bold text-sm sm:text-base tracking-wide px-4">
-                  🚨 OFERTA EXCLUSIVA PARA QUIEN ESTÁ VIENDO EL VÍDEO 🚨
+                <p className="text-white font-bold text-base sm:text-lg tracking-normal px-4">
+                  🚨 Oferta exclusiva para quien está viendo el vídeo 🚨
                 </p>
               </div>
 
               <div className="p-6 sm:p-10 flex flex-col items-center w-full">
                 <div className="flex flex-col items-center mb-6 w-full">
-                  <p className="text-stone-500 font-medium text-sm mb-2 uppercase tracking-widest">La oferta expira en</p>
+                  <p className="text-stone-600 font-semibold text-base sm:text-lg mb-2">Esta oferta especial expira en:</p>
                   <div className="flex gap-2 sm:gap-3 items-center justify-center">
                     <div className="flex flex-col items-center">
                       <div className="bg-stone-900 text-white font-mono font-bold text-4xl sm:text-6xl px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
                         {Math.floor(timeLeft / 60).toString().padStart(2, '0')}
                       </div>
-                      <span className="text-[10px] sm:text-xs text-stone-400 font-medium mt-1 uppercase tracking-widest">Minutos</span>
+                      <span className="text-xs sm:text-sm text-stone-500 font-semibold mt-1">Minutos</span>
                     </div>
                     <span className="text-stone-900 font-bold text-4xl sm:text-5xl -mt-4 sm:-mt-5 animate-pulse">:</span>
                     <div className="flex flex-col items-center">
                       <div className="bg-stone-900 text-white font-mono font-bold text-4xl sm:text-6xl px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
                         {(timeLeft % 60).toString().padStart(2, '0')}
                       </div>
-                      <span className="text-[10px] sm:text-xs text-stone-400 font-medium mt-1 uppercase tracking-widest">Segundos</span>
+                      <span className="text-xs sm:text-sm text-stone-500 font-semibold mt-1">Segundos</span>
                     </div>
                   </div>
                 </div>
@@ -136,29 +161,20 @@ export default function App() {
                 />
 
                 <div className="mb-8 flex flex-col items-center text-center">
-                  <span className="mb-2 text-base font-medium text-stone-500 line-through sm:text-lg">
+                  <span className="mb-2 text-lg sm:text-xl font-medium text-stone-500 line-through">
                     Valor normal: {geo.originalPriceFormatted}
                   </span>
                   <div className="flex flex-col items-center leading-tight">
-                    <span className="text-xl sm:text-2xl md:text-3xl font-bold text-stone-800 tracking-tight">
+                    <span className="text-2xl sm:text-3xl font-serif font-bold text-[#212121] tracking-tight">
                       Ahora solo
                     </span>
-                    <span className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#166534] my-1">
+                    <span className="text-5xl sm:text-6xl md:text-7xl font-serif font-extrabold tracking-tight text-[#166534] my-1.5">
                       {geo.currentPriceFormatted}
                     </span>
-                    <span className="text-sm sm:text-base font-medium text-stone-500">
+                    <span className="text-base sm:text-lg font-medium text-stone-600">
                       Aproximadamente
                     </span>
                   </div>
-                  {geo.isLocal ? (
-                    <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1 text-xs sm:text-sm font-semibold text-emerald-800 border border-emerald-200 shadow-sm">
-                      🌍 {geo.countryName}: Equivale a solo $7 USD (Hotmart cobra en {geo.currencyCode})
-                    </span>
-                  ) : (
-                    <span className="mt-2 text-xs sm:text-sm text-stone-500 font-medium">
-                      Equivale a solo $7 USD (Pago 100% seguro)
-                    </span>
-                  )}
                 </div>
 
                 <a
@@ -166,7 +182,7 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => trackCheckoutClick("Botón 1 (Debajo del Video)")}
-                  className="group relative inline-flex w-full items-center justify-center gap-1.5 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-3 sm:px-6 py-4 sm:py-5 text-[14px] sm:text-lg font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 text-center leading-tight whitespace-nowrap"
+                  className="group relative inline-flex w-full items-center justify-center gap-2 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-4 sm:px-8 py-4 sm:py-5 text-base sm:text-xl font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 text-center leading-tight whitespace-nowrap"
                 >
                   <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
                     <div className="relative h-full w-8 bg-white/20" />
@@ -181,9 +197,9 @@ export default function App() {
       </section>
 
       {/* SECCIÓN 2: EL PROBLEMA */}
-      <section className="bg-white px-4 pt-4 pb-10 sm:px-6 md:pt-6 md:pb-16">
+      <section className="bg-white px-4 pt-6 pb-12 sm:px-6 md:pt-8 md:pb-16">
         <div className="mx-auto max-w-3xl">
-          <div className="space-y-4 sm:space-y-5 text-base leading-relaxed text-stone-700 sm:text-lg md:text-xl md:leading-loose">
+          <div className="space-y-6 text-lg sm:text-xl md:text-2xl leading-[1.75] text-[#212121]">
             <p>
               Hija, respira. Y por un momento, deja de culparte.
             </p>
@@ -193,7 +209,7 @@ export default function App() {
             <p>
               Quizá alguien te dijo que es simplemente la edad, que después de los 40 es normal.
             </p>
-            <p className="font-semibold text-stone-900">
+            <p className="font-serif font-bold text-[#166534] text-xl sm:text-2xl md:text-3xl">
               Pero escucha bien a esta vieja abuela: Tu cuerpo no está roto.
             </p>
             <p>
@@ -204,13 +220,13 @@ export default function App() {
       </section>
 
       {/* SECCIÓN 3: TESTIMONIOS Y LA AUTORIDAD */}
-      <section className="bg-[#14532D] px-4 py-10 text-stone-50 sm:px-6 md:py-16">
+      <section className="bg-[#14532D] px-4 py-12 text-stone-50 sm:px-6 md:py-16">
         <div className="mx-auto max-w-6xl">
 
           {/* TESTIMONIOS */}
           <div className="mb-12 sm:mb-16">
             <div className="text-center mb-6 sm:mb-8">
-              <h2 className="mx-auto max-w-2xl font-serif text-2xl font-bold leading-tight text-[#FDFBF7] sm:text-3xl md:text-4xl text-balance">
+              <h2 className="mx-auto max-w-2xl font-serif text-2xl font-bold leading-snug text-[#FDFBF7] sm:text-3xl md:text-4xl text-balance">
                 Ellas ya desintoxicaron su cuerpo y apagaron el dolor
               </h2>
             </div>
@@ -242,17 +258,17 @@ export default function App() {
               />
             </div>
 
-            <div className="space-y-4 sm:space-y-6 text-center lg:text-left">
-              <h2 className="font-serif text-2xl font-bold leading-tight text-[#FDFBF7] sm:text-3xl md:text-4xl">
+            <div className="space-y-5 text-center lg:text-left">
+              <h2 className="font-serif text-2xl font-bold leading-snug text-[#FDFBF7] sm:text-3xl md:text-4xl">
                 El Método Ancestral de 21 Días
               </h2>
 
-              <p className="text-base leading-relaxed text-emerald-100 sm:text-lg md:text-xl">
+              <p className="text-lg leading-[1.7] text-emerald-100 sm:text-xl md:text-2xl">
                 No quiero darte pociones mágicas ni que vivas contando calorías con angustia. Quiero enseñarte a regresar a lo sencillo: comida real, plantas utilizadas con prudencia, movimiento suave y descanso.
               </p>
 
               <div className="rounded-xl border border-emerald-700 bg-emerald-900/50 p-4 sm:p-5 md:p-6 backdrop-blur-sm text-center sm:text-left">
-                <p className="text-[15px] sm:text-lg font-bold text-amber-400 leading-snug text-balance">
+                <p className="text-base sm:text-xl font-bold text-amber-300 leading-snug text-balance">
                   El método ancestral para deshinchar tu vientre, frenar el dolor y reactivar tu metabolismo.
                 </p>
               </div>
@@ -262,53 +278,53 @@ export default function App() {
       </section>
 
       {/* SECCIÓN 4: ENTREGABLES */}
-      <section className="px-4 py-10 sm:px-6 md:py-16">
+      <section className="px-4 py-12 sm:px-6 md:py-16">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-6 text-center sm:mb-10">
+          <div className="mb-8 text-center sm:mb-12">
             <h2 className="font-serif text-2xl font-bold text-[#166534] sm:text-3xl md:text-4xl">
               Tu Transformación<br />Paso a Paso
             </h2>
           </div>
 
-          <div className="grid gap-4 sm:gap-5 lg:gap-6 md:grid-cols-2">
+          <div className="grid gap-5 sm:gap-6 lg:gap-8 md:grid-cols-2">
             {/* Item 1 */}
-            <div className="group rounded-2xl bg-white p-5 sm:p-6 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10">
+            <div className="group rounded-2xl bg-white p-6 sm:p-7 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10">
               <div className="mb-3 sm:mb-4 inline-flex rounded-xl bg-emerald-100 p-3 text-[#166534]">
                 <Droplets className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
-              <h3 className="mb-1 sm:mb-2 text-lg sm:text-xl font-bold text-stone-900">
+              <h3 className="mb-2 text-xl sm:text-2xl font-serif font-bold text-[#212121]">
                 Fase 1 (Días 1-7)<br />
                 <span className="text-[#B45309]">Drenaje Profundo</span>
               </h3>
-              <p className="text-sm sm:text-base text-stone-600">
+              <p className="text-base sm:text-lg text-[#212121] leading-[1.65]">
                 Expulsa el líquido retenido y la hinchazón severa. Volverás a abrocharte el pantalón sin que te apriete.
               </p>
             </div>
 
             {/* Item 2 */}
-            <div className="group rounded-2xl bg-white p-5 sm:p-6 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10">
+            <div className="group rounded-2xl bg-white p-6 sm:p-7 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10">
               <div className="mb-3 sm:mb-4 inline-flex rounded-xl bg-emerald-100 p-3 text-[#166534]">
                 <Sun className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
-              <h3 className="mb-1 sm:mb-2 text-lg sm:text-xl font-bold text-stone-900">
+              <h3 className="mb-2 text-xl sm:text-2xl font-serif font-bold text-[#212121]">
                 Fase 2 (Días 8-14)<br />
                 <span className="text-[#B45309]">Reseteo Metabólico</span>
               </h3>
-              <p className="text-sm sm:text-base text-stone-600">
+              <p className="text-base sm:text-lg text-[#212121] leading-[1.65]">
                 Usa las combinaciones exactas para apagar la resistencia a la insulina y derretir la grasa estancada.
               </p>
             </div>
 
             {/* Item 3 */}
-            <div className="group rounded-2xl bg-white p-5 sm:p-6 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10 sm:col-span-2 md:col-span-1 lg:col-span-2 lg:max-w-xl lg:mx-auto lg:w-full">
+            <div className="group rounded-2xl bg-white p-6 sm:p-7 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10 sm:col-span-2 md:col-span-1 lg:col-span-2 lg:max-w-xl lg:mx-auto lg:w-full">
               <div className="mb-3 sm:mb-4 inline-flex rounded-xl bg-emerald-100 p-3 text-[#166534]">
                 <Leaf className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
-              <h3 className="mb-1 sm:mb-2 text-lg sm:text-xl font-bold text-stone-900">
+              <h3 className="mb-2 text-xl sm:text-2xl font-serif font-bold text-[#212121]">
                 Fase 3 (Días 15-21)<br />
                 <span className="text-[#B45309]">Alivio y Rejuvenecimiento</span>
               </h3>
-              <p className="text-sm sm:text-base text-stone-600">
+              <p className="text-base sm:text-lg text-[#212121] leading-[1.65]">
                 Recetas antiinflamatorias intensivas que apagan el fuego en tus rodillas, lumbares y articulaciones.
               </p>
             </div>
@@ -317,7 +333,7 @@ export default function App() {
       </section>
 
       {/* SECCIÓN 5: CIERRE Y CTA FINAL */}
-      <section id="checkout" className="bg-[#FDFBF7] px-4 py-10 sm:px-6 md:py-16 border-t border-stone-200">
+      <section id="checkout" className="bg-[#FDFBF7] px-4 py-12 sm:px-6 md:py-16 border-t border-stone-200">
         <div className="mx-auto max-w-4xl text-center">
           <div className="flex flex-col items-center">
             {/* CAJA DE OFERTA */}
@@ -342,30 +358,21 @@ export default function App() {
                 />
               </div>
 
-              <div className="mb-6 flex flex-col items-center text-center">
-                <span className="mb-2 text-base font-medium text-stone-500 line-through sm:text-lg">
+              <div className="mb-8 flex flex-col items-center text-center">
+                <span className="mb-2 text-lg sm:text-xl font-medium text-stone-500 line-through">
                   Valor normal: {geo.originalPriceFormatted}
                 </span>
                 <div className="flex flex-col items-center leading-tight">
-                  <span className="text-xl sm:text-2xl md:text-3xl font-bold text-stone-800 tracking-tight">
+                  <span className="text-2xl sm:text-3xl font-serif font-bold text-[#212121] tracking-tight">
                     Ahora solo
                   </span>
-                  <span className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#166534] my-1">
+                  <span className="text-5xl sm:text-6xl md:text-7xl font-serif font-extrabold tracking-tight text-[#166534] my-1.5">
                     {geo.currentPriceFormatted}
                   </span>
-                  <span className="text-sm sm:text-base font-medium text-stone-500">
+                  <span className="text-base sm:text-lg font-medium text-stone-600">
                     Aproximadamente
                   </span>
                 </div>
-                {geo.isLocal ? (
-                  <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1 text-xs sm:text-sm font-semibold text-emerald-800 border border-emerald-200 shadow-sm">
-                    🌍 {geo.countryName}: Equivale a solo $7 USD (Hotmart cobra en {geo.currencyCode})
-                  </span>
-                ) : (
-                  <span className="mt-2 text-xs sm:text-sm text-stone-500 font-medium">
-                    Equivale a solo $7 USD (Pago 100% seguro)
-                  </span>
-                )}
               </div>
 
               <a
@@ -373,7 +380,7 @@ export default function App() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackCheckoutClick("Botón 2 (Oferta Final)")}
-                className="group relative inline-flex w-full items-center justify-center gap-2 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-4 sm:px-6 py-4 sm:py-5 text-[15px] sm:text-xl font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-14 whitespace-nowrap"
+                className="group relative inline-flex w-full items-center justify-center gap-2 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-6 py-4 sm:py-5 text-base sm:text-xl font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-14 whitespace-nowrap"
               >
                 <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
                   <div className="relative h-full w-12 bg-white/20" />
@@ -381,13 +388,13 @@ export default function App() {
                 <span>QUIERO ADQUIRIR AHORA</span>
               </a>
               
-              <p className="mt-6 text-xs sm:text-sm text-stone-500 font-medium">
+              <p className="mt-6 text-sm sm:text-base text-stone-500 font-medium">
                 🔒 Pago 100% seguro. Acceso inmediato al finalizar tu orden.
               </p>
             </div>
             
             {/* TEXTO DEBAJO DE LA OFERTA */}
-            <p className="max-w-2xl text-lg sm:text-xl leading-relaxed text-stone-700 md:text-2xl text-balance">
+            <p className="max-w-2xl text-lg sm:text-xl leading-[1.75] text-[#212121] font-serif md:text-2xl text-balance">
               La decisión es tuya. Puedes seguir despertando mañana con el mismo dolor articular y la misma frustración frente al espejo... O puedes unirte a las mujeres que ya están usando la medicina de la tierra.
             </p>
           </div>
