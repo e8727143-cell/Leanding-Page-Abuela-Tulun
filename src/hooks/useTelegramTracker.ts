@@ -42,16 +42,29 @@ export function useTelegramTracker(countryName: string) {
         let ip = "";
 
         try {
-          const res = await fetch("https://ipapi.co/json/");
-          if (res.ok) {
-            const data = await res.json();
-            city = data.city || "";
-            country = data.country_name || country;
-            ip = data.ip || "";
-            geoDetailsRef.current = { country, city, ip };
+          const srvRes = await fetch("/api/geo");
+          if (srvRes.ok) {
+            const data = await srvRes.json();
+            if (data && data.countryName) {
+              city = data.city || "";
+              country = data.countryName || country;
+              ip = data.ip || "";
+              geoDetailsRef.current = { country, city, ip };
+            }
           }
         } catch {
-          // Fallback a los datos actuales
+          try {
+            const geoRes = await fetch("https://get.geojs.io/v1/ip/geo.json");
+            if (geoRes.ok) {
+              const data2 = await geoRes.json();
+              city = data2.city || "";
+              country = data2.country || country;
+              ip = data2.ip || "";
+              geoDetailsRef.current = { country, city, ip };
+            }
+          } catch {
+            // Fallback a los datos actuales
+          }
         }
 
         const notifyRes = await fetch("/api/telegram-notify", {

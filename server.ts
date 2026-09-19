@@ -197,6 +197,109 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Endpoint seguro de geolocalización sin límites de tasa
+  app.get("/api/geo", async (req, res) => {
+    try {
+      const forwarded = req.headers["x-forwarded-for"];
+      const realIp = req.headers["x-real-ip"];
+      const cfConnectingIp = req.headers["cf-connecting-ip"];
+      
+      let clientIp = "";
+      if (typeof cfConnectingIp === "string" && cfConnectingIp.trim()) {
+        clientIp = cfConnectingIp.trim();
+      } else if (typeof realIp === "string" && realIp.trim()) {
+        clientIp = realIp.trim();
+      } else if (typeof forwarded === "string" && forwarded.trim()) {
+        clientIp = forwarded.split(",")[0].trim();
+      } else {
+        clientIp = req.socket.remoteAddress || "";
+      }
+
+      // Limpiar prefijo IPv6 si viene como ::ffff:1.2.3.4
+      if (clientIp.startsWith("::ffff:")) {
+        clientIp = clientIp.substring(7);
+      }
+
+      const isPrivate = !clientIp || 
+        clientIp.startsWith("127.") || 
+        clientIp === "::1" || 
+        clientIp.startsWith("10.") || 
+        clientIp.startsWith("192.168.") || 
+        clientIp.startsWith("172.16.") || 
+        clientIp.startsWith("172.17.") || 
+        clientIp.startsWith("172.18.") || 
+        clientIp.startsWith("172.19.") || 
+        clientIp.startsWith("172.20.") || 
+        clientIp.startsWith("172.21.") || 
+        clientIp.startsWith("172.22.") || 
+        clientIp.startsWith("172.23.") || 
+        clientIp.startsWith("172.24.") || 
+        clientIp.startsWith("172.25.") || 
+        clientIp.startsWith("172.26.") || 
+        clientIp.startsWith("172.27.") || 
+        clientIp.startsWith("172.28.") || 
+        clientIp.startsWith("172.29.") || 
+        clientIp.startsWith("172.30.") || 
+        clientIp.startsWith("172.31.");
+
+      const ipParam = isPrivate ? "" : `/${clientIp}`;
+
+      // 1. Probar geojs.io (alta velocidad y estabilidad)
+      try {
+        const geoRes = await fetch(`https://get.geojs.io/v1/ip/geo${ipParam ? ipParam + ".json" : ".json"}`, { signal: AbortSignal.timeout(3500) });
+        if (geoRes.ok) {
+          const data = await geoRes.json();
+          if (data && data.country_code) {
+            return res.json({
+              countryCode: data.country_code.toUpperCase(),
+              countryName: data.country || "",
+              city: data.city || "",
+              ip: data.ip || clientIp
+            });
+          }
+        }
+      } catch {}
+
+      // 2. Probar ip-api.com
+      if (!isPrivate) {
+        try {
+          const ipApiRes = await fetch(`http://ip-api.com/json/${clientIp}`, { signal: AbortSignal.timeout(3500) });
+          if (ipApiRes.ok) {
+            const data = await ipApiRes.json();
+            if (data && data.status === "success" && data.countryCode) {
+              return res.json({
+                countryCode: data.countryCode.toUpperCase(),
+                countryName: data.country || "",
+                city: data.city || "",
+                ip: clientIp
+              });
+            }
+          }
+        } catch {}
+      }
+
+      // 3. Probar ipwho.is
+      try {
+        const ipRes = await fetch(`https://ipwho.is${ipParam}`, { signal: AbortSignal.timeout(3500) });
+        if (ipRes.ok) {
+          const data = await ipRes.json();
+          if (data && data.success !== false && data.country_code) {
+            return res.json({
+              countryCode: data.country_code.toUpperCase(),
+              countryName: data.country || "",
+              city: data.city || "",
+              ip: data.ip || clientIp
+            });
+          }
+        }
+      } catch {}
+
+      return res.json({ countryCode: null });
+    } catch {
+      return res.json({ countryCode: null });
+    }
+  });
+
   // Endpoint seguro para notificaciones de Telegram
   app.post("/api/telegram-notify", async (req, res) => {
     try {
