@@ -6,6 +6,8 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "motion/react";
 import { Leaf, Sun, Droplets, Sparkles, ArrowRight, Play } from "lucide-react";
+import { useGeoCurrency } from "./hooks/useGeoCurrency";
+import { useTelegramTracker } from "./hooks/useTelegramTracker";
 
 const CustomVideo = ({ src, className, onTimeUpdate }: { src: string; className?: string; onTimeUpdate?: any }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -26,34 +28,9 @@ const CustomVideo = ({ src, className, onTimeUpdate }: { src: string; className?
 
 export default function App() {
   const [showHeroButton, setShowHeroButton] = useState(false);
-  const [viewers, setViewers] = useState(457);
   const [timeLeft, setTimeLeft] = useState(1800);
-  const [showExitPopup, setShowExitPopup] = useState(false);
-
-  useEffect(() => {
-    const handleMouseLeave = (e: MouseEvent) => {
-      if (e.clientY <= 0 && !showExitPopup) {
-        setShowExitPopup(true);
-      }
-    };
-
-    document.addEventListener("mouseleave", handleMouseLeave);
-    return () => document.removeEventListener("mouseleave", handleMouseLeave);
-  }, [showExitPopup]);
-
-  useEffect(() => {
-    if (showHeroButton) return;
-    const interval = setInterval(() => {
-      setViewers(prev => {
-        let change = Math.floor(Math.random() * 11) - 5;
-        let next = prev + change;
-        if (next > 500) next = 500;
-        if (next < 410) next = 410;
-        return next;
-      });
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [showHeroButton]);
+  const geo = useGeoCurrency();
+  const { trackCheckoutClick } = useTelegramTracker(geo.countryName);
 
   useEffect(() => {
     if (!showHeroButton) return;
@@ -62,64 +39,6 @@ export default function App() {
     }, 1000);
     return () => clearInterval(interval);
   }, [showHeroButton]);
-
-  const [commentsData, setCommentsData] = useState<{id: number, name: string, text: string, time: string, avatar: string}[]>([]);
-  const [isTyping, setIsTyping] = useState(true);
-
-  useEffect(() => {
-    // Ensure no duplicates in the avatars list (removed the duplicate URL)
-    const AVATARS = Array.from(new Set([
-      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688455/Woman_taking_profile_selfie_20260917202911.jpg",
-      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688455/Woman_taking_home_selfie_20260917202825.jpg",
-      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688455/Woman_taking_selfie_20260917202949.jpg",
-      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688454/Woman_taking_selfie_20260917203334.jpg",
-      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688454/Woman_taking_spontaneous_selfie_20260917203407.jpg",
-      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688455/Woman_taking_selfie_indoors_20260917203140.jpg",
-      "https://res.cloudinary.com/nudnxkcm/image/upload/v1789688454/Woman_taking_selfie_profile_picture_20260917202415.jpg"
-    ]));
-
-    const baseComments = [
-      { id: 1, name: "María Fernanda", text: "Llevo 3 días y ya no me duelen las rodillas, es increíble." },
-      { id: 2, name: "Carmen Rosa", text: "Al fin algo que no son pastillas. Empecé hoy." },
-      { id: 3, name: "Teresa G.", text: "Pensé que era mentira pero ya bajé 2 tallas de pantalón, me siento super desinflamada." },
-      { id: 4, name: "Luz Elena", text: "Alguien más sintió alivio en la espalda la primera semana?" }
-    ];
-
-    const shuffledAvatars = [...AVATARS].sort(() => 0.5 - Math.random());
-    
-    let currentTime = Math.floor(Math.random() * 3) + 1;
-    
-    const initializedComments = baseComments.map((c, index) => {
-      // Direct access guarantees uniqueness since shuffledAvatars has 7 unique elements
-      const avatar = shuffledAvatars[index];
-      const timeStr = `Hace ${currentTime} min`;
-      currentTime += Math.floor(Math.random() * 10) + 4;
-      return { ...c, avatar, time: timeStr };
-    });
-
-    setCommentsData(initializedComments);
-    setIsTyping(true);
-
-    const typingTimer = setTimeout(() => {
-      setIsTyping(false);
-      setCommentsData(prev => {
-        // Prevent double injection in React strict mode
-        if (prev.some(c => c.id === 5)) return prev;
-        
-        const newComment = {
-          id: 5,
-          name: "Patricia M.",
-          text: "¡Yo también quiero empezar! Acabo de ver el video y me identifico muchísimo.",
-          time: "Justo ahora",
-          // The 5th unique avatar from the list
-          avatar: shuffledAvatars[baseComments.length]
-        };
-        return [...prev, newComment];
-      });
-    }, Math.floor(Math.random() * 8000) + 7000); // Between 7 and 15 seconds
-
-    return () => clearTimeout(typingTimer);
-  }, []);
 
   const MOCKUP_BOOK =
     "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059099/mockup_libro_desintoxica_tu_cuerpo_en_21_dias-Photoroom.png";
@@ -132,53 +51,30 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] font-sans text-stone-800 selection:bg-emerald-200 overflow-x-hidden flex flex-col w-full max-w-[100vw]">
-      {showExitPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 md:p-10">
-            <button 
-              onClick={() => setShowExitPopup(false)}
-              className="absolute right-4 top-4 text-stone-400 hover:text-stone-600"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-            <div className="text-center">
-              <h2 className="mb-4 font-serif text-2xl font-bold text-red-600 md:text-3xl">¡ESPERA!</h2>
-              <p className="mb-6 text-base text-stone-600 md:text-lg leading-relaxed">
-                Hija, de verdad quiero ayudarte y esta oferta es exclusiva para quien miró el vídeo, no se repetirá más. Cómo última oferta puedes llevarte el libro digital con todas mis recetas por apenas <span className="font-bold text-stone-900">$9.97</span>
-              </p>
-              <a
-                href="https://pay.hotmart.com/W105526885V?off=82bvewu1&checkoutMode=10"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group relative inline-flex w-full items-center justify-center overflow-hidden rounded-full bg-red-600 px-6 py-4 text-sm font-bold text-white shadow-[0_8px_30px_rgb(220,38,38,0.3)] transition-all hover:scale-105 hover:bg-red-700 hover:shadow-[0_8px_40px_rgb(220,38,38,0.4)] active:scale-95 sm:text-base md:text-lg text-center"
-              >
-                <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
-                  <div className="relative h-full w-8 bg-white/20" />
-                </span>
-                <span>APROVECHAR OFERTA EXCLUSIVA</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* BANNER SUPERIOR DE ADVERTENCIA */}
       <div className="bg-amber-400 px-4 py-2 text-center text-sm font-bold tracking-wide text-amber-950 md:text-base">
-        ATENCIÓN! Las farmacias no quieren que sepas esto. Este contenido es exclusivo para pocas personas.
+        ATENCIÓN: Para la mujer que siente que su propio cuerpo se convirtió en su enemigo.
       </div>
 
       {/* SECCIÓN 1: HERO */}
-      <section className="relative overflow-hidden px-4 pt-6 pb-10 sm:px-6 md:pt-10 md:pb-16">
+      <section className="relative overflow-hidden px-4 pt-5 pb-3 sm:px-6 md:pt-8 md:pb-4">
         {/* Subtle background blob */}
         <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-emerald-900/5 blur-3xl"></div>
         <div className="absolute top-1/2 -left-24 h-64 w-64 rounded-full bg-amber-600/5 blur-3xl"></div>
 
         <div className="mx-auto max-w-5xl relative z-10">
           <div className="text-center">
-            <h1 className="mx-auto mb-4 max-w-4xl text-balance font-serif text-[22px] font-bold leading-[1.15] tracking-tight text-[#166534] sm:text-4xl md:text-5xl lg:text-6xl sm:leading-tight">
-              Cómo Vaciar Tu Abdomen, Apagar El Dolor Articular Y Reactivar Tu Metabolismo En 21 Días... Sin Pastillas De Farmacia.
+            <h1 className="mx-auto mb-3 max-w-4xl font-serif font-bold tracking-tight text-[#166534]">
+              <span className="block text-[20px] leading-[1.25] sm:text-3xl md:text-4xl lg:text-5xl sm:leading-tight">
+                <span className="block">Cómo Desinflamar Tu Vientre,</span>
+                <span className="block">Apagar El Dolor Articular</span>
+                <span className="block">Y Recuperar Tu Energía En 21 Días...</span>
+              </span>
+              <span className="mt-2 sm:mt-3 block text-sm xs:text-base sm:text-2xl md:text-3xl font-bold whitespace-nowrap text-[#166534]">
+                Volviendo A La Sabiduría De Antes.
+              </span>
             </h1>
-            <div className="mt-4 mb-6 sm:mb-8 flex justify-center">
+            <div className="mt-3 mb-4 sm:mb-6 flex justify-center">
               <p className="inline-block rounded-lg bg-amber-400 px-4 py-2 text-sm sm:text-base md:text-lg font-bold text-amber-950 shadow-sm text-balance">
                 Mira el vídeo abajo que puede desaparecer en cualquier momento.
               </p>
@@ -186,7 +82,7 @@ export default function App() {
           </div>
 
           {/* VSL VIDEO SECTION */}
-          <div className="mx-auto mb-6 w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-stone-900/5 bg-stone-900">
+          <div className="mx-auto mb-0 sm:mb-2 w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-stone-900/5 bg-stone-900">
             <div className="relative aspect-video w-full">
               <CustomVideo
                 src="https://res.cloudinary.com/nudnxkcm/video/upload/v1789085259/VSL_Leandig_Page_Abuela_Tulun.mp4"
@@ -200,57 +96,12 @@ export default function App() {
             </div>
           </div>
 
-          {!showHeroButton && (
-            <div className="mx-auto max-w-4xl w-full px-2 sm:px-0 mb-8 sm:mb-12 transition-opacity duration-500">
-              <div className="flex justify-center items-center gap-2 mb-6 text-stone-600 font-medium text-sm sm:text-base">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                </span>
-                <span className="text-red-600 font-bold">{viewers}</span> personas están viendo este video
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6 text-left">
-                <h3 className="text-lg font-bold text-stone-800 mb-4 border-b border-stone-100 pb-2">Comentarios (14)</h3>
-                <div className="space-y-4">
-                  {commentsData.map(c => (
-                    <div key={c.id} className="flex gap-3">
-                      <img 
-                        src={c.avatar} 
-                        alt={c.name} 
-                        className="h-10 w-10 shrink-0 rounded-full object-cover shadow-sm border border-stone-200"
-                      />
-                      <div className="flex flex-col">
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-bold text-sm text-[#3b5998]">{c.name}</span>
-                          <span className="text-xs text-stone-400">{c.time}</span>
-                        </div>
-                        <p className="text-sm text-stone-700 mt-0.5">{c.text}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {isTyping && (
-                  <div className="flex gap-3 items-center mt-6 p-3 bg-stone-50 rounded-xl border border-stone-100">
-                    <div className="flex gap-1 bg-stone-200 px-3 py-2 rounded-full items-center">
-                      <div className="w-1.5 h-1.5 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                      <div className="w-1.5 h-1.5 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                      <div className="w-1.5 h-1.5 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
-                    </div>
-                    <span className="text-xs font-medium text-stone-500 italic">Alguien está escribiendo un comentario...</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {showHeroButton && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="flex flex-col items-center w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl ring-2 ring-red-500 overflow-hidden relative"
+              className="mt-4 sm:mt-6 flex flex-col items-center w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl ring-2 ring-red-500 overflow-hidden relative"
             >
               <div className="w-full bg-red-600 py-3 text-center">
                 <p className="text-white font-bold text-sm sm:text-base tracking-wide px-4">
@@ -285,16 +136,36 @@ export default function App() {
                 />
 
                 <div className="mb-8 flex flex-col items-center text-center">
-                  <span className="mb-1 text-base font-medium text-stone-500 line-through sm:text-lg">Valor normal: $49.97</span>
-                  <span className="text-4xl font-extrabold tracking-tight text-[#166534] sm:text-5xl md:text-6xl">
-                    Ahora solo $11.97
+                  <span className="mb-2 text-base font-medium text-stone-500 line-through sm:text-lg">
+                    Valor normal: {geo.originalPriceFormatted}
                   </span>
+                  <div className="flex flex-col items-center leading-tight">
+                    <span className="text-xl sm:text-2xl md:text-3xl font-bold text-stone-800 tracking-tight">
+                      Ahora solo
+                    </span>
+                    <span className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#166534] my-1">
+                      {geo.currentPriceFormatted}
+                    </span>
+                    <span className="text-sm sm:text-base font-medium text-stone-500">
+                      Aproximadamente
+                    </span>
+                  </div>
+                  {geo.isLocal ? (
+                    <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1 text-xs sm:text-sm font-semibold text-emerald-800 border border-emerald-200 shadow-sm">
+                      🌍 {geo.countryName}: Equivale a solo $7 USD (Hotmart cobra en {geo.currencyCode})
+                    </span>
+                  ) : (
+                    <span className="mt-2 text-xs sm:text-sm text-stone-500 font-medium">
+                      Equivale a solo $7 USD (Pago 100% seguro)
+                    </span>
+                  )}
                 </div>
 
                 <a
-                  href="https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf"
+                  href="https://pay.hotmart.com/W105526885V?off=qmsrqdaf&checkoutMode=10"
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackCheckoutClick("Botón 1 (Debajo del Video)")}
                   className="group relative inline-flex w-full items-center justify-center gap-1.5 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-3 sm:px-6 py-4 sm:py-5 text-[14px] sm:text-lg font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 text-center leading-tight whitespace-nowrap"
                 >
                   <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
@@ -310,20 +181,23 @@ export default function App() {
       </section>
 
       {/* SECCIÓN 2: EL PROBLEMA */}
-      <section className="bg-white px-4 pt-6 pb-10 sm:px-6 md:pt-8 md:pb-16">
+      <section className="bg-white px-4 pt-4 pb-10 sm:px-6 md:pt-6 md:pb-16">
         <div className="mx-auto max-w-3xl">
           <div className="space-y-4 sm:space-y-5 text-base leading-relaxed text-stone-700 sm:text-lg md:text-xl md:leading-loose">
             <p>
-              Estás agotada. Agotada de hacer dietas que te matan de hambre y ver que la báscula no se mueve. Cansada de despertar con las manos hinchadas, pesadez en las piernas y un dolor de espalda que no te deja disfrutar tu día.
+              Hija, respira. Y por un momento, deja de culparte.
+            </p>
+            <p>
+              Sé lo que has pensado frente al espejo. Te preguntas por qué te levantas con el vientre hinchado, por qué tus rodillas duelen y tu espalda se queja. Estás agotada de hacer dietas que te matan de hambre para luego abandonarlas sintiéndote culpable.
+            </p>
+            <p>
+              Quizá alguien te dijo que es simplemente la edad, que después de los 40 es normal.
             </p>
             <p className="font-semibold text-stone-900">
-              Pero necesito que leas esto con atención: No es tu culpa.
+              Pero escucha bien a esta vieja abuela: Tu cuerpo no está roto.
             </p>
             <p>
-              Esa hinchazón abdominal y esa fatiga crónica no son por "comer de más" ni por "falta de voluntad". Es tu hígado pidiendo auxilio y una severa resistencia a la insulina bloqueando tu metabolismo.
-            </p>
-            <p>
-              La industria farmacéutica quiere que creas que a tu edad el dolor es normal, para mantenerte atada a sus analgésicos. Pero tu cuerpo solo necesita un botón de reinicio.
+              Ha soportado noches sin dormir, estrés, cambios hormonales y tantas veces en las que pusiste a todos los demás primero. La industria farmacéutica quiere que creas que la única salida es vivir tomando analgésicos. Pero tu cuerpo es como una antigua casa de campo: no está enojada contigo, simplemente necesita atención y que abras las ventanas.
             </p>
           </div>
         </div>
@@ -370,11 +244,11 @@ export default function App() {
 
             <div className="space-y-4 sm:space-y-6 text-center lg:text-left">
               <h2 className="font-serif text-2xl font-bold leading-tight text-[#FDFBF7] sm:text-3xl md:text-4xl">
-                El Método Que La Industria Médica Intenta Ocultar
+                El Método Ancestral de 21 Días
               </h2>
 
               <p className="text-base leading-relaxed text-emerald-100 sm:text-lg md:text-xl">
-                Las dietas de moda fallan porque intentan quemar grasa en un cuerpo intoxicado. Es como intentar limpiar el piso con agua sucia. Para volver a sentirte ligera, primero debes destapar tus órganos filtro.
+                No quiero darte pociones mágicas ni que vivas contando calorías con angustia. Quiero enseñarte a regresar a lo sencillo: comida real, plantas utilizadas con prudencia, movimiento suave y descanso.
               </p>
 
               <div className="rounded-xl border border-emerald-700 bg-emerald-900/50 p-4 sm:p-5 md:p-6 backdrop-blur-sm text-center sm:text-left">
@@ -468,17 +342,37 @@ export default function App() {
                 />
               </div>
 
-              <div className="mb-6 flex flex-col items-center">
-                <span className="mb-1 text-base font-medium text-stone-500 line-through sm:text-lg">Valor normal: $47.00</span>
-                <span className="text-4xl font-extrabold tracking-tight text-[#166534] sm:text-5xl md:text-6xl">
-                  Ahora solo $11.97
+              <div className="mb-6 flex flex-col items-center text-center">
+                <span className="mb-2 text-base font-medium text-stone-500 line-through sm:text-lg">
+                  Valor normal: {geo.originalPriceFormatted}
                 </span>
+                <div className="flex flex-col items-center leading-tight">
+                  <span className="text-xl sm:text-2xl md:text-3xl font-bold text-stone-800 tracking-tight">
+                    Ahora solo
+                  </span>
+                  <span className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#166534] my-1">
+                    {geo.currentPriceFormatted}
+                  </span>
+                  <span className="text-sm sm:text-base font-medium text-stone-500">
+                    Aproximadamente
+                  </span>
+                </div>
+                {geo.isLocal ? (
+                  <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1 text-xs sm:text-sm font-semibold text-emerald-800 border border-emerald-200 shadow-sm">
+                    🌍 {geo.countryName}: Equivale a solo $7 USD (Hotmart cobra en {geo.currencyCode})
+                  </span>
+                ) : (
+                  <span className="mt-2 text-xs sm:text-sm text-stone-500 font-medium">
+                    Equivale a solo $7 USD (Pago 100% seguro)
+                  </span>
+                )}
               </div>
 
               <a
-                href="https://pay.hotmart.com/W105526885V?checkoutMode=10&off=qmsrqdaf"
+                href="https://pay.hotmart.com/W105526885V?off=qmsrqdaf&checkoutMode=10"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackCheckoutClick("Botón 2 (Oferta Final)")}
                 className="group relative inline-flex w-full items-center justify-center gap-2 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-4 sm:px-6 py-4 sm:py-5 text-[15px] sm:text-xl font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-14 whitespace-nowrap"
               >
                 <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
