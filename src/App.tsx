@@ -164,16 +164,16 @@ export default function App() {
                   <span className="mb-2 text-lg sm:text-xl font-medium text-stone-500 line-through">
                     Valor normal: {geo.originalPriceFormatted}
                   </span>
-                  <div className="flex flex-col items-center leading-tight">
-                    <span className="text-2xl sm:text-3xl font-serif font-bold text-[#212121] tracking-tight">
+                  <div className="flex flex-col items-center leading-tight w-full">
+                    <span className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-[#212121] tracking-tight">
                       Ahora solo
                     </span>
-                    <span className="text-5xl sm:text-6xl md:text-7xl font-serif font-extrabold tracking-tight text-[#166534] my-1.5">
+                    <span className="text-[32px] sm:text-5xl md:text-6xl lg:text-7xl font-serif font-extrabold tracking-tight text-[#166534] my-2 whitespace-nowrap text-center">
                       {geo.currentPriceFormatted}
                     </span>
-                    <span className="text-base sm:text-lg font-medium text-stone-600">
-                      Aproximadamente
-                    </span>
+                    <p className="mt-3 text-sm sm:text-base font-bold text-stone-800 max-w-lg mx-auto text-center leading-relaxed">
+                      Valor aproximado. El precio exacto se mostrará al finalizar tu compra y puede variar según la conversión de moneda e impuestos de tu país.
+                    </p>
                   </div>
                 </div>
 
@@ -362,16 +362,16 @@ export default function App() {
                 <span className="mb-2 text-lg sm:text-xl font-medium text-stone-500 line-through">
                   Valor normal: {geo.originalPriceFormatted}
                 </span>
-                <div className="flex flex-col items-center leading-tight">
-                  <span className="text-2xl sm:text-3xl font-serif font-bold text-[#212121] tracking-tight">
+                <div className="flex flex-col items-center leading-tight w-full">
+                  <span className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-[#212121] tracking-tight">
                     Ahora solo
                   </span>
-                  <span className="text-5xl sm:text-6xl md:text-7xl font-serif font-extrabold tracking-tight text-[#166534] my-1.5">
+                  <span className="text-[32px] sm:text-5xl md:text-6xl lg:text-7xl font-serif font-extrabold tracking-tight text-[#166534] my-2 whitespace-nowrap text-center">
                     {geo.currentPriceFormatted}
                   </span>
-                  <span className="text-base sm:text-lg font-medium text-stone-600">
-                    Aproximadamente
-                  </span>
+                  <p className="mt-3 text-sm sm:text-base font-bold text-stone-800 max-w-lg mx-auto text-center leading-relaxed">
+                    Valor aproximado. El precio exacto se mostrará al finalizar tu compra y puede variar según la conversión de moneda e impuestos de tu país.
+                  </p>
                 </div>
               </div>
 

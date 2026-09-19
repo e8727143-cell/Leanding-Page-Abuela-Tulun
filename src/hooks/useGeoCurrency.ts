@@ -13,9 +13,31 @@ export interface GeoCurrencyInfo {
 // Factor de conversión estimado de Hotmart / dLocal (Tasa interbancaria + ~5% spread)
 const HOTMART_SPREAD = 1.0526;
 
-function formatLocalPrice(currency: string, amount: number): string {
-  if (currency === "USD") return "$7 USD";
+// Tasas de impuestos locales que Hotmart / pasarelas aplican en checkout o resumen bancario
+export const COUNTRY_TAX_RATES: Record<string, number> = {
+  UY: 0.22, // Uruguay 22% IVA
+  CO: 0.19, // Colombia 19% IVA
+  MX: 0.16, // México 16% IVA
+  CL: 0.19, // Chile 19% IVA
+  PE: 0.18, // Perú 18% IGV
+  AR: 0.59, // Argentina ~59% (21% IVA + 30% Ganancias + IIBB)
+  ES: 0.21, // España 21% IVA
+  IT: 0.22, // Italia 22% IVA
+  PT: 0.23, // Portugal 23% IVA
+  GB: 0.20, // Reino Unido 20% VAT
+  US: 0.07, // Estados Unidos ~7% Sales Tax promedio
+  CR: 0.13, // Costa Rica 13% IVA
+  DO: 0.18, // Rep. Dominicana 18% ITBIS
+  GT: 0.12, // Guatemala 12% IVA
+};
+
+function formatLocalPrice(currency: string, amount: number, countryCode?: string): string {
+  if (currency === "USD") {
+    if (countryCode === "US") return "$7.49 USD";
+    return "$7 USD";
+  }
   if (currency === "EUR") return (amount).toFixed(2).replace(".", ",") + " €";
+  if (currency === "GBP") return "£" + (amount).toFixed(2) + " GBP";
   if (currency === "UYU") return "$ " + Math.round(amount) + " UYU";
   if (currency === "PEN") return "S/ " + Math.round(amount) + " PEN";
   if (currency === "MXN") return "$" + Math.round(amount) + " MXN";
@@ -33,15 +55,19 @@ function formatLocalPrice(currency: string, amount: number): string {
   }
   if (currency === "GTQ") return "Q" + Math.round(amount) + " GTQ";
   if (currency === "BOB") return "Bs " + Math.round(amount) + " BOB";
-  if (currency === "CRC") return "₡" + Math.round(amount / 100) * 100 + " CRC";
+  if (currency === "CRC") return "₡" + Math.round(amount / 10) * 10 + " CRC";
   if (currency === "DOP") return "RD$ " + Math.round(amount / 10) * 10 + " DOP";
   return "$" + Math.round(amount) + " " + currency;
 }
 
-function formatOriginalPrice(currency: string, amount: number): string {
+function formatOriginalPrice(currency: string, amount: number, countryCode?: string): string {
   const origAmount = amount * 7; // Ratio 49 USD vs 7 USD (7x)
-  if (currency === "USD") return "$49.00 USD";
+  if (currency === "USD") {
+    if (countryCode === "US") return "$52.40 USD";
+    return "$49.00 USD";
+  }
   if (currency === "EUR") return (origAmount).toFixed(2).replace(".", ",") + " €";
+  if (currency === "GBP") return "£" + (origAmount).toFixed(2) + " GBP";
   if (currency === "UYU") return "$ " + Math.round(origAmount) + " UYU";
   if (currency === "PEN") return "S/ " + Math.round(origAmount) + " PEN";
   if (currency === "MXN") return "$" + Math.round(origAmount) + " MXN";
@@ -73,71 +99,92 @@ const COUNTRY_CURRENCY_MAP: Record<
   UY: {
     countryName: "Uruguay",
     currencyCode: "UYU",
-    currentPriceFormatted: "$ 297 UYU",
-    originalPriceFormatted: "$ 2.050 UYU",
+    currentPriceFormatted: "$ 362 UYU", // 297 + 22% IVA
+    originalPriceFormatted: "$ 2.500 UYU",
     paymentMethods: "Tarjeta, Abitab o Redpagos"
   },
   MX: {
     countryName: "México",
     currencyCode: "MXN",
-    currentPriceFormatted: "$145 MXN",
-    originalPriceFormatted: "$990 MXN",
+    currentPriceFormatted: "$168 MXN", // 145 + 16% IVA
+    originalPriceFormatted: "$1.150 MXN",
     paymentMethods: "Tarjeta, OXXO, SPEI o PayPal"
   },
   CO: {
     countryName: "Colombia",
     currencyCode: "COP",
-    currentPriceFormatted: "$29.800 COP",
-    originalPriceFormatted: "$205.000 COP",
+    currentPriceFormatted: "$35.500 COP", // 29.800 + 19% IVA
+    originalPriceFormatted: "$244.000 COP",
     paymentMethods: "Tarjeta, PSE, Nequi, Efecty o Bancolombia"
   },
   PE: {
     countryName: "Perú",
     currencyCode: "PEN",
-    currentPriceFormatted: "S/ 27 PEN",
-    originalPriceFormatted: "S/ 185 PEN",
+    currentPriceFormatted: "S/ 32 PEN", // 27 + 18% IGV
+    originalPriceFormatted: "S/ 218 PEN",
     paymentMethods: "Tarjeta, PagoEfectivo o Yape"
   },
   CL: {
     countryName: "Chile",
     currencyCode: "CLP",
-    currentPriceFormatted: "$6.990 CLP",
-    originalPriceFormatted: "$49.000 CLP",
+    currentPriceFormatted: "$8.300 CLP", // 6.990 + 19% IVA
+    originalPriceFormatted: "$58.000 CLP",
     paymentMethods: "Tarjeta, Webpay o Sencillito"
   },
   ES: {
     countryName: "España",
     currencyCode: "EUR",
-    currentPriceFormatted: "6,60 €",
-    originalPriceFormatted: "46,00 €",
+    currentPriceFormatted: "7,99 €", // 6,60 + 21% IVA
+    originalPriceFormatted: "55,60 €",
     paymentMethods: "Tarjeta, Bizum o PayPal"
+  },
+  IT: {
+    countryName: "Italia",
+    currencyCode: "EUR",
+    currentPriceFormatted: "8,05 €", // 6,60 + 22% IVA
+    originalPriceFormatted: "56,00 €",
+    paymentMethods: "Carta di credito o PayPal"
+  },
+  PT: {
+    countryName: "Portugal",
+    currencyCode: "EUR",
+    currentPriceFormatted: "8,12 €", // 6,60 + 23% IVA
+    originalPriceFormatted: "56,50 €",
+    paymentMethods: "Cartão de crédito, Multibanco ou PayPal"
+  },
+  GB: {
+    countryName: "Reino Unido",
+    currencyCode: "GBP",
+    currentPriceFormatted: "£6.90 GBP", // ~5.75 + 20% VAT
+    originalPriceFormatted: "£48.00 GBP",
+    paymentMethods: "Card or PayPal"
   },
   AR: {
     countryName: "Argentina",
     currencyCode: "ARS",
-    currentPriceFormatted: "$9.200 ARS",
-    originalPriceFormatted: "$64.000 ARS",
+    currentPriceFormatted: "$14.600 ARS", // 9.200 + ~59% recargos
+    originalPriceFormatted: "$102.000 ARS",
     paymentMethods: "Tarjeta, Pago Fácil o Rapipago"
   },
   GT: {
     countryName: "Guatemala",
     currencyCode: "GTQ",
-    currentPriceFormatted: "Q56 GTQ",
-    originalPriceFormatted: "Q390 GTQ",
+    currentPriceFormatted: "Q63 GTQ", // 56 + 12% IVA
+    originalPriceFormatted: "Q435 GTQ",
     paymentMethods: "Tarjeta o transferencia local"
   },
   CR: {
     countryName: "Costa Rica",
     currencyCode: "CRC",
-    currentPriceFormatted: "₡3.700 CRC",
-    originalPriceFormatted: "₡26.000 CRC",
+    currentPriceFormatted: "₡4.180 CRC", // 3.700 + 13% IVA
+    originalPriceFormatted: "₡29.000 CRC",
     paymentMethods: "Tarjeta local o internacional"
   },
   DO: {
     countryName: "Rep. Dominicana",
     currencyCode: "DOP",
-    currentPriceFormatted: "RD$ 430 DOP",
-    originalPriceFormatted: "RD$ 3.000 DOP",
+    currentPriceFormatted: "RD$ 508 DOP", // 430 + 18% ITBIS
+    originalPriceFormatted: "RD$ 3.500 DOP",
     paymentMethods: "Tarjeta de débito o crédito"
   },
   BO: {
@@ -171,8 +218,8 @@ const COUNTRY_CURRENCY_MAP: Record<
   US: {
     countryName: "Estados Unidos",
     currencyCode: "USD",
-    currentPriceFormatted: "$7 USD",
-    originalPriceFormatted: "$49 USD",
+    currentPriceFormatted: "$7.49 USD", // 7.00 + ~7% avg sales tax
+    originalPriceFormatted: "$52.40 USD",
     paymentMethods: "Credit card, Debit or PayPal"
   }
 };
@@ -198,6 +245,9 @@ function detectCountryFromTimezone(): string | null {
     if (tz.includes("santiago")) return "CL";
     if (tz.includes("buenos_aires") || tz.includes("cordoba")) return "AR";
     if (tz.includes("madrid") || tz.includes("canary")) return "ES";
+    if (tz.includes("rome")) return "IT";
+    if (tz.includes("lisbon")) return "PT";
+    if (tz.includes("london")) return "GB";
     if (tz.includes("guatemala")) return "GT";
     if (tz.includes("costa_rica")) return "CR";
     if (tz.includes("santo_domingo")) return "DO";
@@ -276,14 +326,18 @@ export function useGeoCurrency(): GeoCurrencyInfo {
             const rateData = await rateRes.json();
             const rawRate = rateData.rates?.[currency];
             if (rawRate && typeof rawRate === "number") {
-              const liveCalculatedAmount = rawRate * 7 * HOTMART_SPREAD;
-              updatedCurrentPrice = formatLocalPrice(currency, liveCalculatedAmount);
-              updatedOriginalPrice = formatOriginalPrice(currency, liveCalculatedAmount);
+              const taxRate = COUNTRY_TAX_RATES[resolvedCountryCode] ?? (currency === "EUR" ? 0.21 : 0);
+              const liveCalculatedAmount = rawRate * 7 * HOTMART_SPREAD * (1 + taxRate);
+              updatedCurrentPrice = formatLocalPrice(currency, liveCalculatedAmount, resolvedCountryCode);
+              updatedOriginalPrice = formatOriginalPrice(currency, liveCalculatedAmount, resolvedCountryCode);
             }
           }
         } catch {
           // If offline or blocked, preserves calibrated static rates
         }
+      } else if (resolvedCountryCode === "US") {
+        updatedCurrentPrice = "$7.49 USD";
+        updatedOriginalPrice = "$52.40 USD";
       }
 
       if (isMounted) {
