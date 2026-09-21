@@ -45,7 +45,7 @@ const CustomVideo = ({
 
 export default function App() {
   const [showHeroButton, setShowHeroButton] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(1800);
+  const [timeLeft, setTimeLeft] = useState(59 * 60); // Inicia exactamente en 59 minutos (3540 segundos: 00h : 59m : 00s)
   const geo = useGeoCurrency();
   const {
     trackCheckoutClick,
@@ -129,35 +129,16 @@ export default function App() {
               className="mt-4 sm:mt-6 flex flex-col items-center w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl ring-2 ring-red-500 overflow-hidden relative"
             >
               <div className="w-full bg-red-600 py-3 text-center">
-                <p className="text-white font-bold text-base sm:text-lg tracking-normal px-4">
-                  🚨 Oferta exclusiva para quien está viendo el vídeo 🚨
+                <p className="text-white font-bold text-base sm:text-lg tracking-wide px-4">
+                  OFERTA EXCLUSIVA DE HOY
                 </p>
               </div>
 
               <div className="p-6 sm:p-10 flex flex-col items-center w-full">
-                <div className="flex flex-col items-center mb-6 w-full">
-                  <p className="text-stone-600 font-semibold text-base sm:text-lg mb-2">Esta oferta especial expira en:</p>
-                  <div className="flex gap-2 sm:gap-3 items-center justify-center">
-                    <div className="flex flex-col items-center">
-                      <div className="bg-stone-900 text-white font-mono font-bold text-4xl sm:text-6xl px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
-                        {Math.floor(timeLeft / 60).toString().padStart(2, '0')}
-                      </div>
-                      <span className="text-xs sm:text-sm text-stone-500 font-semibold mt-1">Minutos</span>
-                    </div>
-                    <span className="text-stone-900 font-bold text-4xl sm:text-5xl -mt-4 sm:-mt-5 animate-pulse">:</span>
-                    <div className="flex flex-col items-center">
-                      <div className="bg-stone-900 text-white font-mono font-bold text-4xl sm:text-6xl px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
-                        {(timeLeft % 60).toString().padStart(2, '0')}
-                      </div>
-                      <span className="text-xs sm:text-sm text-stone-500 font-semibold mt-1">Segundos</span>
-                    </div>
-                  </div>
-                </div>
-
                 <img 
-                  src={MOCKUP_PHONE} 
-                  alt="Mockup Celular" 
-                  className="w-32 sm:w-48 object-contain drop-shadow-2xl mb-6"
+                  src={MOCKUP_BOOK} 
+                  alt="Mockup Libro" 
+                  className="w-44 sm:w-60 md:w-64 object-contain drop-shadow-2xl mb-6"
                 />
 
                 <div className="mb-8 flex flex-col items-center text-center">
@@ -190,6 +171,39 @@ export default function App() {
                   <span>QUIERO ADQUIRIR AHORA</span>
                   <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 transition-transform group-hover:translate-x-1 shrink-0" />
                 </a>
+
+                {/* CONTADOR DEBAJO DEL BOTÓN DE COMPRAR */}
+                <div className="mt-6 sm:mt-8 flex flex-col items-center w-full bg-stone-50 border border-stone-200/80 rounded-2xl py-4 px-3 sm:px-6 shadow-sm">
+                  <p className="text-red-600 font-extrabold text-[12px] min-[380px]:text-sm sm:text-base tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 text-center whitespace-nowrap">
+                    <span className="inline-block w-2 h-2 rounded-full bg-red-600 animate-ping shrink-0" />
+                    <span>ESTA OFERTA TERMINA PRONTO</span>
+                  </p>
+                  <div className="flex gap-2 sm:gap-3 items-center justify-center">
+                    {/* HORAS */}
+                    <div className="flex flex-col items-center">
+                      <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
+                        {Math.floor(timeLeft / 3600).toString().padStart(2, '0')}
+                      </div>
+                      <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Horas</span>
+                    </div>
+                    <span className="text-stone-900 font-bold text-2xl sm:text-3xl -mt-4 sm:-mt-5 animate-pulse">:</span>
+                    {/* MINUTOS */}
+                    <div className="flex flex-col items-center">
+                      <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
+                        {Math.floor((timeLeft % 3600) / 60).toString().padStart(2, '0')}
+                      </div>
+                      <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Minutos</span>
+                    </div>
+                    <span className="text-stone-900 font-bold text-2xl sm:text-3xl -mt-4 sm:-mt-5 animate-pulse">:</span>
+                    {/* SEGUNDOS */}
+                    <div className="flex flex-col items-center">
+                      <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
+                        {(timeLeft % 60).toString().padStart(2, '0')}
+                      </div>
+                      <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Segundos</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
