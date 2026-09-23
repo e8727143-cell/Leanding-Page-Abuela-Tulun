@@ -20,8 +20,8 @@ const CustomVideo = ({
   src: string;
   className?: string;
   onTimeUpdate?: any;
-  onPlay?: () => void;
-  onPause?: (e: any) => void;
+  onPlay?: (e?: any) => void;
+  onPause?: (e?: any) => void;
   onEnded?: () => void;
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -109,12 +109,16 @@ export default function App() {
               <CustomVideo
                 src="https://res.cloudinary.com/nudnxkcm/video/upload/v1789085259/VSL_Leandig_Page_Abuela_Tulun.mp4"
                 className="h-full w-full object-cover"
-                onPlay={trackVideoPlay}
-                onPause={(e: any) => trackVideoPause(e.target.currentTime)}
+                onPlay={(e: any) => trackVideoPlay(e?.target?.currentTime ?? 0)}
+                onPause={(e: any) => trackVideoPause(e?.target?.currentTime ?? 0)}
                 onEnded={trackVideoEnded}
                 onTimeUpdate={(e: any) => {
-                  if (e.target.currentTime >= 54 && !showHeroButton) {
+                  const ct = e?.target?.currentTime ?? 0;
+                  if (ct >= 54 && !showHeroButton) {
                     setShowHeroButton(true);
+                  }
+                  if (ct >= 78.8) {
+                    trackVideoEnded();
                   }
                 }}
               />

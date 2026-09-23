@@ -1,29 +1,59 @@
 import { useEffect, useRef } from "react";
 
+/**
+ * Formatea el tiempo del vídeo a MM:SS asegurando un máximo de 01:19 (79 segundos).
+ * Ejemplo: 30s -> "00:30", 70s -> "01:10"
+ */
+function formatVideoTime(seconds: number): string {
+  const total = Math.min(Math.max(0, Math.round(seconds)), 79);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
 export function useTelegramTracker(countryName: string) {
   const startTimeRef = useRef<number>(Date.now());
   const hasTrackedVisitRef = useRef<boolean>(false);
   const hasSentLeaveRef = useRef<boolean>(false);
-  const clickedCheckoutRef = useRef<boolean>(false);
-  const hasPlayedVideoOnceRef = useRef<boolean>(false);
-  const lastPauseTimeoutRef = useRef<any>(null);
   const userNumberRef = useRef<number | null>(null);
 
-  const geoDetailsRef = useRef<{ country: string; city: string; ip: string }>({
-    country: countryName || "Desconocido",
-    city: "",
-    ip: ""
+  // Estados de seguimiento del vídeo principal (duración 01:19)
+  const hasStartedVideoRef = useRef<boolean>(false);
+  const isVideoPausedRef = useRef<boolean>(false);
+  const hasEndedVideoRef = useRef<boolean>(false);
+  const pauseDebounceTimerRef = useRef<any>(null);
+
+  const geoDetailsRef = useRef<{ country: string }>({
+    country: countryName && countryName !== "Internacional" ? countryName : "Desconocido",
   });
 
-  // Actualizar país si cambia la geolocalización
   useEffect(() => {
     if (countryName && countryName !== "Internacional") {
       geoDetailsRef.current.country = countryName;
     }
   }, [countryName]);
 
+  const sendNotification = async (payload: any, keepalive: boolean = false) => {
+    try {
+      const body = JSON.stringify(payload);
+      if (keepalive && typeof navigator !== "undefined" && navigator.sendBeacon) {
+        const blob = new Blob([body], { type: "application/json" });
+        navigator.sendBeacon("/api/telegram-notify", blob);
+      } else {
+        await fetch("/api/telegram-notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive,
+        });
+      }
+    } catch {
+      // Ignorar errores silenciosamente
+    }
+  };
+
   useEffect(() => {
-    // Evitar envío doble en la misma sesión/pestaña
+    // Evitar envío doble en la misma pestaña/sesión
     const alreadyTracked = sessionStorage.getItem("tg_visit_sent");
     const savedUserNumber = sessionStorage.getItem("tg_user_number");
     if (savedUserNumber) {
@@ -36,46 +66,39 @@ export function useTelegramTracker(countryName: string) {
     startTimeRef.current = Date.now();
 
     async function sendVisitNotification() {
-      try {
-        let city = "";
-        let country = geoDetailsRef.current.country;
-        let ip = "";
+      let country = geoDetailsRef.current.country;
 
-        try {
-          const srvRes = await fetch("/api/geo");
-          if (srvRes.ok) {
-            const data = await srvRes.json();
-            if (data && data.countryName) {
-              city = data.city || "";
-              country = data.countryName || country;
-              ip = data.ip || "";
-              geoDetailsRef.current = { country, city, ip };
-            }
-          }
-        } catch {
-          try {
-            const geoRes = await fetch("https://get.geojs.io/v1/ip/geo.json");
-            if (geoRes.ok) {
-              const data2 = await geoRes.json();
-              city = data2.city || "";
-              country = data2.country || country;
-              ip = data2.ip || "";
-              geoDetailsRef.current = { country, city, ip };
-            }
-          } catch {
-            // Fallback a los datos actuales
+      // Obtener país detectado
+      try {
+        const srvRes = await fetch("/api/geo");
+        if (srvRes.ok) {
+          const data = await srvRes.json();
+          if (data && data.countryName) {
+            country = data.countryName;
+            geoDetailsRef.current.country = country;
           }
         }
+      } catch {
+        try {
+          const geoRes = await fetch("https://get.geojs.io/v1/ip/geo.json");
+          if (geoRes.ok) {
+            const data2 = await geoRes.json();
+            if (data2 && data2.country) {
+              country = data2.country;
+              geoDetailsRef.current.country = country;
+            }
+          }
+        } catch {}
+      }
 
+      try {
         const notifyRes = await fetch("/api/telegram-notify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "visit",
             country,
-            city,
-            ip
-          })
+          }),
         });
 
         if (notifyRes.ok) {
@@ -85,45 +108,27 @@ export function useTelegramTracker(countryName: string) {
             sessionStorage.setItem("tg_user_number", data.userNumber.toString());
           }
         }
-      } catch {
-        // Silencioso
-      }
+      } catch {}
     }
 
     sendVisitNotification();
 
-    // Rastrear salida garantizando que solo se dispare UNA vez
+    // Rastrear salida al cerrar pestaña o salir del navegador
     const handleLeave = () => {
       if (hasSentLeaveRef.current) return;
       hasSentLeaveRef.current = true;
 
-      const durationSeconds = Math.round((Date.now() - startTimeRef.current) / 1000);
-      if (durationSeconds < 2) return; // Ignorar rebotes de menos de 2 segundos
+      const durationSeconds = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000));
 
-      const payload = JSON.stringify({
-        type: "leave",
-        country: geoDetailsRef.current.country,
-        city: geoDetailsRef.current.city,
-        durationSeconds,
-        hasClickedCheckout: clickedCheckoutRef.current,
-        userNumber: userNumberRef.current
-      });
-
-      try {
-        if (navigator.sendBeacon) {
-          const blob = new Blob([payload], { type: "application/json" });
-          navigator.sendBeacon("/api/telegram-notify", blob);
-        } else {
-          fetch("/api/telegram-notify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: payload,
-            keepalive: true
-          });
-        }
-      } catch {
-        // ignore
-      }
+      sendNotification(
+        {
+          type: "leave",
+          durationSeconds,
+          country: geoDetailsRef.current.country,
+          userNumber: userNumberRef.current,
+        },
+        true
+      );
     };
 
     window.addEventListener("pagehide", handleLeave);
@@ -135,93 +140,101 @@ export function useTelegramTracker(countryName: string) {
     };
   }, []);
 
-  const trackCheckoutClick = (buttonLabel: string) => {
-    clickedCheckoutRef.current = true;
-    try {
-      fetch("/api/telegram-notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "checkout_click",
+  const trackCheckoutClick = (buttonLabel?: string) => {
+    // 1. Mensaje exacto de clic en botón de compra
+    sendNotification(
+      {
+        type: "checkout_click",
+        country: geoDetailsRef.current.country,
+        userNumber: userNumberRef.current,
+        text: buttonLabel,
+      },
+      true
+    );
+
+    // 2. Notificación de salida de página por clic en comprar (si aún no se ha enviado salida)
+    if (!hasSentLeaveRef.current) {
+      hasSentLeaveRef.current = true;
+      const durationSeconds = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000));
+      sendNotification(
+        {
+          type: "leave",
+          durationSeconds,
           country: geoDetailsRef.current.country,
-          city: geoDetailsRef.current.city,
-          text: buttonLabel,
-          userNumber: userNumberRef.current
-        }),
-        keepalive: true
-      });
-    } catch {
-      // ignore
+          userNumber: userNumberRef.current,
+        },
+        true
+      );
     }
   };
 
-  const trackVideoPlay = () => {
-    // Si ya le dio play recientemente, evitamos spam
-    if (hasPlayedVideoOnceRef.current) return;
-    hasPlayedVideoOnceRef.current = true;
+  const trackVideoPlay = (currentTime: number = 0) => {
+    // Si había un temporizador de pausa pendiente, cancelarlo de inmediato
+    if (pauseDebounceTimerRef.current) {
+      clearTimeout(pauseDebounceTimerRef.current);
+      pauseDebounceTimerRef.current = null;
+    }
 
-    try {
-      fetch("/api/telegram-notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "video_play",
-          country: geoDetailsRef.current.country,
-          city: geoDetailsRef.current.city,
-          userNumber: userNumberRef.current
-        })
+    if (hasEndedVideoRef.current) {
+      hasEndedVideoRef.current = false;
+    }
+
+    if (!hasStartedVideoRef.current) {
+      // Primer play del visitante
+      hasStartedVideoRef.current = true;
+      isVideoPausedRef.current = false;
+      sendNotification({
+        type: "video_play",
+        userNumber: userNumberRef.current,
       });
-    } catch {
-      // ignore
+    } else if (isVideoPausedRef.current) {
+      // El visitante quitó la pausa y continuó el vídeo
+      isVideoPausedRef.current = false;
+      const timeStr = formatVideoTime(currentTime);
+      sendNotification({
+        type: "video_resume",
+        text: timeStr,
+        userNumber: userNumberRef.current,
+      });
     }
   };
 
-  const trackVideoPause = (currentTimeSeconds: number) => {
-    // Si pausó al final o al inicio (0 seg), lo ignoramos
-    if (currentTimeSeconds < 1) return;
-
-    if (lastPauseTimeoutRef.current) {
-      clearTimeout(lastPauseTimeoutRef.current);
+  const trackVideoPause = (currentTime: number = 0) => {
+    // Si el video ya terminó o está en los últimos segundos (>= 78s), no contar como pausa
+    if (hasEndedVideoRef.current || currentTime >= 78 || currentTime < 0.5) {
+      return;
     }
 
-    // Debounce de 1.5s para no disparar si solo está adelantando o retrocediendo
-    lastPauseTimeoutRef.current = setTimeout(() => {
-      const mins = Math.floor(currentTimeSeconds / 60);
-      const secs = Math.floor(currentTimeSeconds % 60);
-      const timeStr = `${mins}:${secs < 10 ? "0" : ""}${secs} min`;
+    if (pauseDebounceTimerRef.current) {
+      clearTimeout(pauseDebounceTimerRef.current);
+    }
 
-      try {
-        fetch("/api/telegram-notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "video_pause",
-            country: geoDetailsRef.current.country,
-            city: geoDetailsRef.current.city,
-            text: timeStr,
-            userNumber: userNumberRef.current
-          })
-        });
-      } catch {
-        // ignore
-      }
-    }, 1500);
+    // Debounce de 450ms para evitar spam al adelantar/retroceder
+    pauseDebounceTimerRef.current = setTimeout(() => {
+      if (hasEndedVideoRef.current) return;
+      isVideoPausedRef.current = true;
+      const timeStr = formatVideoTime(currentTime);
+      sendNotification({
+        type: "video_pause",
+        text: timeStr,
+        userNumber: userNumberRef.current,
+      });
+    }, 450);
   };
 
   const trackVideoEnded = () => {
-    try {
-      fetch("/api/telegram-notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "video_ended",
-          country: geoDetailsRef.current.country,
-          city: geoDetailsRef.current.city,
-          userNumber: userNumberRef.current
-        })
+    if (pauseDebounceTimerRef.current) {
+      clearTimeout(pauseDebounceTimerRef.current);
+      pauseDebounceTimerRef.current = null;
+    }
+    isVideoPausedRef.current = false;
+
+    if (!hasEndedVideoRef.current) {
+      hasEndedVideoRef.current = true;
+      sendNotification({
+        type: "video_ended",
+        userNumber: userNumberRef.current,
       });
-    } catch {
-      // ignore
     }
   };
 
@@ -229,6 +242,6 @@ export function useTelegramTracker(countryName: string) {
     trackCheckoutClick,
     trackVideoPlay,
     trackVideoPause,
-    trackVideoEnded
+    trackVideoEnded,
   };
 }

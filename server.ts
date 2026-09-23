@@ -315,13 +315,13 @@ async function startServer() {
         });
       }
 
-      // Prevención estricta de mensajes duplicados
+      // Prevención estricta de mensajes duplicados rápidos
       cleanRecentAlerts();
-      const dedupKey = `${type}_${country || ""}_${city || ""}_${text || ""}_${providedUserNumber || ""}`;
+      const dedupKey = `${type}_${text || ""}_${country || ""}_${providedUserNumber || ""}`;
       const lastSentTime = recentAlertsMap.get(dedupKey);
       const now = Date.now();
 
-      if (lastSentTime && now - lastSentTime < 5000) {
+      if (lastSentTime && now - lastSentTime < 2000) {
         return res.json({ success: true, deduped: true });
       }
       recentAlertsMap.set(dedupKey, now);
@@ -351,53 +351,34 @@ async function startServer() {
         saveDailyStats();
       }
 
-      const userTag = activeUserNumber ? `(Usuario ${activeUserNumber} del día)` : "";
-      const uyTime = getUruguayTimeStr();
-      let formattedMessage = type ? "" : text;
+      let formattedMessage = "";
 
-      if (!formattedMessage) {
-        if (type === "visit") {
-          formattedMessage =
-            `🔔 *¡Nueva Visita en tu Web!*\n` +
-            `👤 *Usuario ${activeUserNumber} del día*\n\n` +
-            `📍 *Ubicación:* ${city ? city + ", " : ""}${country || "Desconocido"}\n` +
-            `🌐 *IP:* \`${ip || "Oculta"}\`\n` +
-            `🕒 *Hora:* ${uyTime} (Hora Uruguay)\n` +
-            `📱 *Dispositivo:* ${req.headers["user-agent"]?.includes("Mobi") ? "📱 Celular" : "💻 Computadora"}`;
-        } else if (type === "video_play") {
-          formattedMessage =
-            `▶️ *Reproducción de Video Iniciada* ${userTag}\n\n` +
-            `📍 *Ubicación:* ${city ? city + ", " : ""}${country || "Desconocido"}\n` +
-            `🎬 El usuario comenzó a ver la presentación de la Abuela Tulun.\n` +
-            `🕒 *Hora:* ${uyTime} (Hora Uruguay)`;
-        } else if (type === "video_pause") {
-          formattedMessage =
-            `⏸️ *Video Pausado* ${userTag}\n\n` +
-            `📍 *Ubicación:* ${country || "Desconocido"}\n` +
-            `⏱️ *Momento del video:* ${text || "En pausa"}\n` +
-            `🕒 *Hora:* ${uyTime} (Hora Uruguay)`;
-        } else if (type === "video_ended") {
-          formattedMessage =
-            `🎉 *¡Video Visto Completo (100%)!* ${userTag}\n\n` +
-            `📍 *Ubicación:* ${city ? city + ", " : ""}${country || "Desconocido"}\n` +
-            `🎬 El usuario terminó de mirar todo el video de la Abuela Tulun.\n` +
-            `🕒 *Hora:* ${uyTime} (Hora Uruguay)`;
-        } else if (type === "checkout_click") {
-          formattedMessage =
-            `🔥 *¡INTENCIÓN DE COMPRA!* ${userTag}\n\n` +
-            `🛒 Un usuario de *${country || "tu página"}* acaba de hacer clic en el botón de Hotmart.\n` +
-            `📍 *Detalle:* ${text || "Botón de Checkout"}\n` +
-            `🕒 *Hora:* ${uyTime} (Hora Uruguay)`;
-        } else if (type === "leave") {
-          const mins = Math.floor((durationSeconds || 0) / 60);
-          const secs = (durationSeconds || 0) % 60;
-          const timeFormatted = mins > 0 ? `${mins}m ${secs}s` : `${secs} segundos`;
-
-          formattedMessage =
-            `🚪 *Visita Finalizada* ${userTag}\n\n` +
-            `📍 *País:* ${country || "Desconocido"}\n` +
-            `⏱️ *Tiempo total en la página:* ${timeFormatted}`;
+      if (type === "visit") {
+        const countryDisplay = country && country !== "Desconocido" ? country : "Desconocido";
+        formattedMessage = `👁🗨Nuevo visitante (País: ${countryDisplay})\nUsuario: ${activeUserNumber || 1}`;
+      } else if (type === "video_play") {
+        formattedMessage = `Visitante Inició el Vídeo...🎬`;
+      } else if (type === "video_pause") {
+        formattedMessage = `Visitante Pausó el Vídeo (${text || "00:00"}) ⏸`;
+      } else if (type === "video_resume") {
+        formattedMessage = `Visitante Continuó el Vídeo (${text || "00:00"}) ▶`;
+      } else if (type === "video_ended") {
+        formattedMessage = `Vídeo completado con Éxito! ✅🎉`;
+      } else if (type === "checkout_click") {
+        formattedMessage = `Cliente Potencial! Tienes un CLIC EN EL BOTÓN DE COMPRA 💰💵`;
+      } else if (type === "leave") {
+        const totalSecs = typeof durationSeconds === "number" ? Math.max(1, durationSeconds) : 1;
+        const mins = Math.floor(totalSecs / 60);
+        const secs = totalSecs % 60;
+        let timeFormatted = "";
+        if (mins === 0) {
+          timeFormatted = `${secs} segundo${secs !== 1 ? "s" : ""}`;
+        } else {
+          timeFormatted = `${mins} min ${secs < 10 ? "0" : ""}${secs} seg`;
         }
+        formattedMessage = `Visitante salió de la página 🚶‍♂️👏\nTiempo dentro de la página (${timeFormatted})`;
+      } else {
+        formattedMessage = text || "Notificación de actividad";
       }
 
       const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -407,7 +388,6 @@ async function startServer() {
         body: JSON.stringify({
           chat_id: chatId,
           text: formattedMessage,
-          parse_mode: "Markdown",
         }),
       });
 
