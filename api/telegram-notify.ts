@@ -1,4 +1,9 @@
-import fs from "fs";
+import { createClient } from "@supabase/supabase-js";
+
+// Inicialización de cliente Supabase
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_KEY || "";
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 // Caché de desduplicación en memoria para la función de Vercel
 const recentAlertsMap = new Map<string, number>();
@@ -10,70 +15,6 @@ function cleanRecentAlerts() {
       recentAlertsMap.delete(key);
     }
   }
-}
-
-// Estadísticas del día con persistencia y zona horaria de Uruguay (America/Montevideo)
-const STATS_FILE = "/tmp/uy_daily_stats.json";
-
-interface DailyStats {
-  date: string;
-  visitors: number;
-  totalDurationSeconds: number;
-  durationSessionsCount: number;
-  checkoutClicks: number;
-  videoPlays: number;
-  countries: Record<string, number>;
-  summarySent: boolean;
-}
-
-function getUruguayDateStr(): string {
-  return new Intl.DateTimeFormat("es-UY", {
-    timeZone: "America/Montevideo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-function getUruguayTimeStr(): string {
-  return new Date().toLocaleTimeString("es-UY", {
-    timeZone: "America/Montevideo",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-}
-
-function loadDailyStats(): DailyStats {
-  const today = getUruguayDateStr();
-  try {
-    if (fs.existsSync(STATS_FILE)) {
-      const data = JSON.parse(fs.readFileSync(STATS_FILE, "utf-8"));
-      if (data && data.date === today) {
-        return data;
-      }
-    }
-  } catch {}
-
-  const fresh: DailyStats = {
-    date: today,
-    visitors: 0,
-    totalDurationSeconds: 0,
-    durationSessionsCount: 0,
-    checkoutClicks: 0,
-    videoPlays: 0,
-    countries: {},
-    summarySent: false,
-  };
-  saveDailyStats(fresh);
-  return fresh;
-}
-
-function saveDailyStats(stats: DailyStats) {
-  try {
-    fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2), "utf-8");
-  } catch {}
 }
 
 export default async function handler(req: any, res: any) {
@@ -91,110 +32,146 @@ export default async function handler(req: any, res: any) {
 
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const { text, type, country, city, durationSeconds, ip, userNumber: providedUserNumber } = body || {};
+    const {
+      sessionId,
+      type,
+      country,
+      text,
+      durationSeconds,
+      userNumber: providedUserNumber,
+      isMobile,
+    } = body || {};
+
+    // 1. FILTRO ESTRICTO: Solo permitir dispositivos Móviles o Tablets (nada de PCs/computadoras)
+    const userAgent = (req.headers["user-agent"] || "").toLowerCase();
+    const mobileRegex = /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i;
+    const tabletRegex = /android|ipad|playbook|silk|tablet/i;
+    const isMobileUA = mobileRegex.test(userAgent) || tabletRegex.test(userAgent);
+
+    if (
+      isMobile === false ||
+      (!isMobile && !isMobileUA && !userAgent.includes("mobile") && !userAgent.includes("tablet"))
+    ) {
+      return res.status(200).json({ success: true, ignored: true, reason: "desktop_device_ignored" });
+    }
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    if (!botToken || !chatId) {
-      return res.status(200).json({
-        status: "pending_config",
-        message: "Variables de entorno TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID no configuradas en Vercel."
-      });
-    }
-
-    // Prevención estricta de duplicados
+    // Desduplicación rápida en memoria
     cleanRecentAlerts();
-    const dedupKey = `${type}_${country || ""}_${city || ""}_${text || ""}_${providedUserNumber || ""}`;
+    const dedupKey = `${type}_${sessionId || ""}_${text || ""}`;
     const lastSentTime = recentAlertsMap.get(dedupKey);
     const now = Date.now();
 
-    if (lastSentTime && now - lastSentTime < 5000) {
+    if (lastSentTime && now - lastSentTime < 2000) {
       return res.status(200).json({ success: true, deduped: true });
     }
     recentAlertsMap.set(dedupKey, now);
 
-    // Cargar y actualizar estadísticas diarias
-    const stats = loadDailyStats();
-    let activeUserNumber = providedUserNumber;
+    let activeUserNumber: number | null = providedUserNumber || null;
+
+    // ==========================================
+    // PERSISTENCIA EN SUPABASE
+    // ==========================================
+    if (supabase && sessionId) {
+      try {
+        if (type === "visit") {
+          // Revisar si ya existe este sessionId en la tabla visitas
+          const { data: existingVisit, error: searchError } = await supabase
+            .from("visitas")
+            .select("id")
+            .eq("session_id", sessionId)
+            .maybeSingle();
+
+          if (!searchError && !existingVisit) {
+            // Insertar nueva fila
+            await supabase.from("visitas").insert([
+              {
+                session_id: sessionId,
+                pais: country && country !== "Desconocido" ? country : "Otros",
+                entrada: new Date().toISOString(),
+              },
+            ]);
+          }
+
+          // Conteo total de filas para el número real exacto
+          const { count, error: countError } = await supabase
+            .from("visitas")
+            .select("*", { count: "exact", head: true });
+
+          if (!countError && count !== null) {
+            activeUserNumber = count;
+          }
+        } else if (type === "click_comprar" || type === "checkout_click") {
+          await supabase
+            .from("visitas")
+            .update({ clic_comprar: true })
+            .eq("session_id", sessionId);
+        } else if (type === "leave") {
+          const exitTime = new Date().toISOString();
+          await supabase
+            .from("visitas")
+            .update({ salida: exitTime })
+            .eq("session_id", sessionId);
+        }
+      } catch (dbErr) {
+        console.error("Error en operación con Supabase:", dbErr);
+      }
+    }
+
+    // ==========================================
+    // MENSAJES TELEGRAM CORTOS Y LIMPIOS
+    // ==========================================
+    let formattedMessage = "";
 
     if (type === "visit") {
-      stats.visitors += 1;
-      activeUserNumber = stats.visitors;
-
-      const validCountry = country && country !== "Desconocido" ? country : "Otros";
-      stats.countries[validCountry] = (stats.countries[validCountry] || 0) + 1;
-      saveDailyStats(stats);
+      const countryDisplay = country && country !== "Desconocido" ? country : "Desconocido";
+      formattedMessage = `👁🗨Nuevo visitante (País: ${countryDisplay})\nUsuario: ${activeUserNumber || 1}`;
+    } else if (type === "click_comprar" || type === "checkout_click") {
+      formattedMessage = `Cliente Potencial! Tienes un CLIC EN EL BOTÓN DE COMPRA 💰💵`;
     } else if (type === "leave") {
-      if (typeof durationSeconds === "number" && durationSeconds > 0) {
-        stats.totalDurationSeconds += durationSeconds;
-        stats.durationSessionsCount += 1;
-        saveDailyStats(stats);
+      const totalSecs = typeof durationSeconds === "number" ? Math.max(1, durationSeconds) : 1;
+      const mins = Math.floor(totalSecs / 60);
+      const secs = totalSecs % 60;
+      let timeFormatted = "";
+      if (mins === 0) {
+        timeFormatted = `${secs} segundo${secs !== 1 ? "s" : ""}`;
+      } else {
+        timeFormatted = `${mins} min ${secs < 10 ? "0" : ""}${secs} seg`;
       }
-    } else if (type === "checkout_click") {
-      stats.checkoutClicks += 1;
-      saveDailyStats(stats);
+      formattedMessage = `Visitante salió de la página 🚶‍♂️👏\nTiempo dentro de la página (${timeFormatted})`;
     } else if (type === "video_play") {
-      stats.videoPlays += 1;
-      saveDailyStats(stats);
+      formattedMessage = `Visitante Inició el Vídeo...🎬`;
+    } else if (type === "video_pause") {
+      formattedMessage = `Visitante Pausó el Vídeo (${text || "00:00"}) ⏸`;
+    } else if (type === "video_resume") {
+      formattedMessage = `Visitante Continuó el Vídeo (${text || "00:00"}) ▶`;
+    } else if (type === "video_ended") {
+      formattedMessage = `Vídeo completado con Éxito! ✅🎉`;
+    } else {
+      formattedMessage = text || "Notificación de actividad";
     }
 
-    const userTag = activeUserNumber ? `(Usuario ${activeUserNumber} del día)` : "";
-    const uyTime = getUruguayTimeStr();
-    let formattedMessage = type ? "" : text;
-
-    if (!formattedMessage) {
-      if (type === "visit") {
-        formattedMessage = `🔔 *¡Nueva Visita en tu Web!*\n` +
-          `👤 *Usuario ${activeUserNumber} del día*\n\n` +
-          `📍 *Ubicación:* ${city ? city + ", " : ""}${country || "Desconocido"}\n` +
-          `🌐 *IP:* \`${ip || "Oculta"}\`\n` +
-          `🕒 *Hora:* ${uyTime} (Hora Uruguay)\n` +
-          `📱 *Dispositivo:* ${req.headers["user-agent"]?.includes("Mobi") ? "📱 Celular" : "💻 Computadora"}`;
-      } else if (type === "video_play") {
-        formattedMessage = `▶️ *Reproducción de Video Iniciada* ${userTag}\n\n` +
-          `📍 *Ubicación:* ${city ? city + ", " : ""}${country || "Desconocido"}\n` +
-          `🎬 El usuario comenzó a ver la presentación de la Abuela Tulun.\n` +
-          `🕒 *Hora:* ${uyTime} (Hora Uruguay)`;
-      } else if (type === "video_pause") {
-        formattedMessage = `⏸️ *Video Pausado* ${userTag}\n\n` +
-          `📍 *Ubicación:* ${country || "Desconocido"}\n` +
-          `⏱️ *Momento del video:* ${text || "En pausa"}\n` +
-          `🕒 *Hora:* ${uyTime} (Hora Uruguay)`;
-      } else if (type === "video_ended") {
-        formattedMessage = `🎉 *¡Video Visto Completo (100%)!* ${userTag}\n\n` +
-          `📍 *Ubicación:* ${city ? city + ", " : ""}${country || "Desconocido"}\n` +
-          `🎬 El usuario terminó de mirar todo el video de la Abuela Tulun.\n` +
-          `🕒 *Hora:* ${uyTime} (Hora Uruguay)`;
-      } else if (type === "checkout_click") {
-        formattedMessage = `🔥 *¡INTENCIÓN DE COMPRA!* ${userTag}\n\n` +
-          `🛒 Un usuario de *${country || "tu página"}* acaba de hacer clic en el botón de Hotmart.\n` +
-          `📍 *Detalle:* ${text || "Botón de Checkout"}\n` +
-          `🕒 *Hora:* ${uyTime} (Hora Uruguay)`;
-      } else if (type === "leave") {
-        const mins = Math.floor((durationSeconds || 0) / 60);
-        const secs = (durationSeconds || 0) % 60;
-        const timeFormatted = mins > 0 ? `${mins}m ${secs}s` : `${secs} segundos`;
-        
-        formattedMessage = `🚪 *Visita Finalizada* ${userTag}\n\n` +
-          `📍 *País:* ${country || "Desconocido"}\n` +
-          `⏱️ *Tiempo total en la página:* ${timeFormatted}`;
-      }
+    let telegramResult: any = null;
+    if (botToken && chatId && formattedMessage) {
+      const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      const response = await fetch(telegramUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: formattedMessage,
+        }),
+      });
+      telegramResult = await response.json();
     }
 
-    const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-    const response = await fetch(telegramUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: formattedMessage,
-        parse_mode: "Markdown"
-      })
+    return res.status(200).json({
+      success: true,
+      userNumber: activeUserNumber,
+      result: telegramResult,
     });
-
-    const result = await response.json();
-    return res.status(200).json({ success: result.ok, userNumber: activeUserNumber, result });
   } catch (err: any) {
     console.error("Error al procesar en Vercel Function:", err);
     return res.status(500).json({ error: err.message });
