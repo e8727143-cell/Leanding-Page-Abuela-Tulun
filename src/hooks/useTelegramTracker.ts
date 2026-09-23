@@ -1,6 +1,41 @@
 import { useEffect, useRef } from "react";
 
 /**
+ * Detecta si el dispositivo es Móvil o Tablet (excluyendo computadoras de escritorio y laptops).
+ * Revisa userAgent, vendor y capacidades táctiles multitáctiles (ej. iPads con desktop Safari).
+ */
+export function isMobileOrTabletDevice(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return false;
+  }
+  const ua = (navigator.userAgent || navigator.vendor || (window as any).opera || "").toLowerCase();
+
+  // Comprobación de User Agent estándar para móviles y tablets
+  const mobileRegex = /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i;
+  const tabletRegex = /android|ipad|playbook|silk|tablet/i;
+
+  if (mobileRegex.test(ua) || tabletRegex.test(ua)) {
+    return true;
+  }
+
+  // Detección especial para iPad en iPadOS (donde userAgent reporta Macintosh pero tiene touch screen)
+  if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) {
+    return true;
+  }
+
+  // Detección complementaria por pantalla y puntero táctil exclusivo
+  if (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches &&
+    !window.matchMedia("(pointer: fine)").matches
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Obtiene o genera un sessionId único y persistente para el visitante.
  * Utiliza crypto.randomUUID() con fallback seguro para navegadores antiguos,
  * y lo almacena en localStorage (o sessionStorage) para que se mantenga si recarga la página.
@@ -37,6 +72,7 @@ function formatVideoTime(seconds: number): string {
 }
 
 export function useTelegramTracker(countryName: string) {
+  const isMobileOrTablet = isMobileOrTabletDevice();
   const startTimeRef = useRef<number>(Date.now());
   const hasTrackedVisitRef = useRef<boolean>(false);
   const hasSentLeaveRef = useRef<boolean>(false);
@@ -60,11 +96,17 @@ export function useTelegramTracker(countryName: string) {
   }, [countryName]);
 
   const sendNotification = async (payload: any, keepalive: boolean = false) => {
+    // Si NO es móvil ni tablet (es PC/Computadora), no enviar notificación ni registrar evento
+    if (!isMobileOrTablet) {
+      return;
+    }
+
     try {
-      // Inyectar automáticamente el sessionId único en cada payload
+      // Inyectar automáticamente el sessionId único y marca de dispositivo móvil/tablet
       const fullPayload = {
         sessionId: sessionIdRef.current,
         country: geoDetailsRef.current.country,
+        isMobile: true,
         ...payload,
       };
 
@@ -86,6 +128,11 @@ export function useTelegramTracker(countryName: string) {
   };
 
   useEffect(() => {
+    // Si NO es un móvil ni una tablet (es computadora de escritorio o laptop), descartar por completo
+    if (!isMobileOrTablet) {
+      return;
+    }
+
     // Evitar envío doble de la visita en la misma pestaña/sesión
     const alreadyTracked = sessionStorage.getItem("tg_visit_sent");
     const savedUserNumber = sessionStorage.getItem("tg_user_number");
@@ -132,6 +179,7 @@ export function useTelegramTracker(countryName: string) {
             type: "visit",
             sessionId: sessionIdRef.current,
             country,
+            isMobile: true,
           }),
         });
 
@@ -172,9 +220,11 @@ export function useTelegramTracker(countryName: string) {
       window.removeEventListener("pagehide", handleLeave);
       window.removeEventListener("beforeunload", handleLeave);
     };
-  }, []);
+  }, [isMobileOrTablet]);
 
   const trackCheckoutClick = (buttonLabel?: string) => {
+    if (!isMobileOrTablet) return;
+
     // 1. Mensaje de clic en comprar con tipo click_comprar y sessionId
     sendNotification(
       {
@@ -204,6 +254,8 @@ export function useTelegramTracker(countryName: string) {
   };
 
   const trackVideoPlay = (currentTime: number = 0) => {
+    if (!isMobileOrTablet) return;
+
     if (pauseDebounceTimerRef.current) {
       clearTimeout(pauseDebounceTimerRef.current);
       pauseDebounceTimerRef.current = null;
@@ -234,6 +286,8 @@ export function useTelegramTracker(countryName: string) {
   };
 
   const trackVideoPause = (currentTime: number = 0) => {
+    if (!isMobileOrTablet) return;
+
     if (hasEndedVideoRef.current || currentTime >= 78 || currentTime < 0.5) {
       return;
     }
@@ -255,6 +309,8 @@ export function useTelegramTracker(countryName: string) {
   };
 
   const trackVideoEnded = () => {
+    if (!isMobileOrTablet) return;
+
     if (pauseDebounceTimerRef.current) {
       clearTimeout(pauseDebounceTimerRef.current);
       pauseDebounceTimerRef.current = null;
@@ -272,6 +328,7 @@ export function useTelegramTracker(countryName: string) {
 
   return {
     sessionId: sessionIdRef.current,
+    isMobileOrTablet,
     trackCheckoutClick,
     trackVideoPlay,
     trackVideoPause,

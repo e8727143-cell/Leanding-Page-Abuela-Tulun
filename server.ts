@@ -316,7 +316,19 @@ async function startServer() {
         text,
         durationSeconds,
         userNumber: providedUserNumber,
+        isMobile,
       } = req.body;
+
+      // Doble filtro: verificar User-Agent en el servidor para asegurar que es móvil o tablet
+      const userAgent = (req.headers["user-agent"] || "").toLowerCase();
+      const mobileRegex = /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i;
+      const tabletRegex = /android|ipad|playbook|silk|tablet/i;
+      const isMobileUA = mobileRegex.test(userAgent) || tabletRegex.test(userAgent);
+
+      // Si no viene marcado como móvil desde el frontend y tampoco tiene UA de móvil/tablet, descartar (PC de escritorio)
+      if (isMobile === false || (!isMobile && !isMobileUA && !userAgent.includes("mobile") && !userAgent.includes("tablet"))) {
+        return res.json({ success: true, ignored: true, reason: "desktop_device_ignored" });
+      }
 
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       const chatId = process.env.TELEGRAM_CHAT_ID;
