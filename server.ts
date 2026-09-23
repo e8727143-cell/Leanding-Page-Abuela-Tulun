@@ -2,6 +2,12 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
+import { createClient } from "@supabase/supabase-js";
+
+// Inicialización de cliente Supabase usando variables de entorno
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_KEY || "";
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 // Caché de desduplicación en memoria para evitar mensajes dobles en Telegram
 const recentAlertsMap = new Map<string, number>();
@@ -300,24 +306,24 @@ async function startServer() {
     }
   });
 
-  // Endpoint seguro para notificaciones de Telegram
+  // Endpoint seguro para notificaciones de Telegram y persistencia en Supabase
   app.post("/api/telegram-notify", async (req, res) => {
     try {
-      const { text, type, country, city, durationSeconds, ip, userNumber: providedUserNumber } = req.body;
+      const {
+        sessionId,
+        type,
+        country,
+        text,
+        durationSeconds,
+        userNumber: providedUserNumber,
+      } = req.body;
 
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       const chatId = process.env.TELEGRAM_CHAT_ID;
 
-      if (!botToken || !chatId) {
-        return res.json({
-          status: "pending_config",
-          message: "Telegram bot token o chat ID no configurados aún.",
-        });
-      }
-
-      // Prevención estricta de mensajes duplicados rápidos
+      // Desduplicación rápida en memoria para evitar llamadas concurrentes idénticas
       cleanRecentAlerts();
-      const dedupKey = `${type}_${text || ""}_${country || ""}_${providedUserNumber || ""}`;
+      const dedupKey = `${type}_${sessionId || ""}_${text || ""}`;
       const lastSentTime = recentAlertsMap.get(dedupKey);
       const now = Date.now();
 
@@ -326,31 +332,84 @@ async function startServer() {
       }
       recentAlertsMap.set(dedupKey, now);
 
-      // Cargar estadísticas del día
-      const stats = loadDailyStats();
-      let activeUserNumber = providedUserNumber;
+      let activeUserNumber: number | null = providedUserNumber || null;
 
-      if (type === "visit") {
-        stats.visitors += 1;
-        activeUserNumber = stats.visitors;
+      // ==========================================
+      // INTEGRACIÓN CON BASE DE DATOS SUPABASE
+      // ==========================================
+      if (supabase && sessionId) {
+        try {
+          if (type === "visit") {
+            // 1. Revisar si ya existe este sessionId en la tabla visitas
+            const { data: existingVisit, error: searchError } = await supabase
+              .from("visitas")
+              .select("id")
+              .eq("session_id", sessionId)
+              .maybeSingle();
 
-        const validCountry = country && country !== "Desconocido" ? country : "Otros";
-        stats.countries[validCountry] = (stats.countries[validCountry] || 0) + 1;
-        saveDailyStats();
-      } else if (type === "leave") {
-        if (typeof durationSeconds === "number" && durationSeconds > 0) {
-          stats.totalDurationSeconds += durationSeconds;
-          stats.durationSessionsCount += 1;
-          saveDailyStats();
+            if (!searchError && !existingVisit) {
+              // 2. Si NO existe, insertar nueva fila
+              await supabase.from("visitas").insert([
+                {
+                  session_id: sessionId,
+                  pais: country && country !== "Desconocido" ? country : "Otros",
+                  entrada: new Date().toISOString(),
+                },
+              ]);
+            }
+
+            // 3. Conteo total de filas en la tabla visitas para el número real exacto
+            const { count, error: countError } = await supabase
+              .from("visitas")
+              .select("*", { count: "exact", head: true });
+
+            if (!countError && count !== null) {
+              activeUserNumber = count;
+            }
+          } else if (type === "click_comprar" || type === "checkout_click") {
+            // Actualizar columna clic_comprar a true
+            await supabase
+              .from("visitas")
+              .update({ clic_comprar: true })
+              .eq("session_id", sessionId);
+          } else if (type === "leave") {
+            // Actualizar columna salida con la fecha/hora actual
+            const exitTime = new Date().toISOString();
+            await supabase
+              .from("visitas")
+              .update({ salida: exitTime })
+              .eq("session_id", sessionId);
+          }
+        } catch (dbErr) {
+          console.error("Error en operación con Supabase:", dbErr);
         }
-      } else if (type === "checkout_click") {
-        stats.checkoutClicks += 1;
-        saveDailyStats();
-      } else if (type === "video_play") {
-        stats.videoPlays += 1;
-        saveDailyStats();
       }
 
+      // Si Supabase no está configurado o falló, fallback a estadísticas en memoria/disco local
+      if (activeUserNumber === null) {
+        const stats = loadDailyStats();
+        if (type === "visit") {
+          stats.visitors += 1;
+          activeUserNumber = stats.visitors;
+          const validCountry = country && country !== "Desconocido" ? country : "Otros";
+          stats.countries[validCountry] = (stats.countries[validCountry] || 0) + 1;
+          saveDailyStats();
+        } else if (type === "leave") {
+          if (typeof durationSeconds === "number" && durationSeconds > 0) {
+            stats.totalDurationSeconds += durationSeconds;
+            stats.durationSessionsCount += 1;
+            saveDailyStats();
+          }
+        } else if (type === "click_comprar" || type === "checkout_click") {
+          stats.checkoutClicks += 1;
+          saveDailyStats();
+        } else if (type === "video_play") {
+          stats.videoPlays += 1;
+          saveDailyStats();
+        }
+      }
+
+      // Formatear mensaje para Telegram
       let formattedMessage = "";
 
       if (type === "visit") {
@@ -364,7 +423,7 @@ async function startServer() {
         formattedMessage = `Visitante Continuó el Vídeo (${text || "00:00"}) ▶`;
       } else if (type === "video_ended") {
         formattedMessage = `Vídeo completado con Éxito! ✅🎉`;
-      } else if (type === "checkout_click") {
+      } else if (type === "click_comprar" || type === "checkout_click") {
         formattedMessage = `Cliente Potencial! Tienes un CLIC EN EL BOTÓN DE COMPRA 💰💵`;
       } else if (type === "leave") {
         const totalSecs = typeof durationSeconds === "number" ? Math.max(1, durationSeconds) : 1;
@@ -381,20 +440,200 @@ async function startServer() {
         formattedMessage = text || "Notificación de actividad";
       }
 
-      const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-      const response = await fetch(telegramUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: formattedMessage,
-        }),
-      });
+      // Enviar notificación a Telegram si los tokens están configurados
+      let telegramResult: any = null;
+      if (botToken && chatId) {
+        const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+        const response = await fetch(telegramUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: formattedMessage,
+          }),
+        });
+        telegramResult = await response.json();
+      }
 
-      const result = await response.json();
-      return res.json({ success: result.ok, userNumber: activeUserNumber, result });
+      return res.json({
+        success: true,
+        userNumber: activeUserNumber,
+        result: telegramResult,
+      });
     } catch (err: any) {
-      console.error("Error al enviar alerta a Telegram:", err);
+      console.error("Error al procesar notificación en Telegram/Supabase:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Endpoint para Vercel Cron: Reporte Diario 23:59 Hora Uruguay (Montevideo)
+  app.get("/api/cron-report", async (req, res) => {
+    try {
+      // 1. Verificación de seguridad de Vercel Crons
+      const authHeader = req.headers.authorization;
+      const cronSecret = process.env.CRON_SECRET;
+      if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+        return res.status(401).json({ error: "No autorizado. Token de Vercel Cron inválido." });
+      }
+
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      const chatId = process.env.TELEGRAM_CHAT_ID;
+
+      // 2. Calcular rango de tiempo para el día actual en Uruguay (UTC-3)
+      // Obtenemos la fecha en formato YYYY-MM-DD en America/Montevideo
+      const now = new Date();
+      const uyDateParts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Montevideo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(now); // "YYYY-MM-DD"
+
+      // 00:00:00 y 23:59:59 en Uruguay (UTC-3 equivale a +03:00 en formato ISO UTC)
+      const startOfDayUY = new Date(`${uyDateParts}T00:00:00-03:00`).toISOString();
+      const endOfDayUY = new Date(`${uyDateParts}T23:59:59.999-03:00`).toISOString();
+
+      let totalUsuarios = 0;
+      let topPaises: { pais: string; count: number }[] = [];
+      let tiempoPromedioFormatted = "0 seg";
+      let totalClicsComprar = 0;
+
+      if (supabase) {
+        // Consultar visitas registradas dentro del día de Uruguay
+        const { data: rows, error: fetchError } = await supabase
+          .from("visitas")
+          .select("id, session_id, pais, entrada, salida, clic_comprar")
+          .gte("entrada", startOfDayUY)
+          .lte("entrada", endOfDayUY);
+
+        if (fetchError) {
+          console.error("Error al consultar Supabase para el reporte cron:", fetchError);
+        } else if (rows) {
+          totalUsuarios = rows.length;
+
+          // a) Top países
+          const paisesMap: Record<string, number> = {};
+          let totalDurationSec = 0;
+          let sessionsWithDuration = 0;
+
+          rows.forEach((row) => {
+            const p = row.pais && row.pais !== "Desconocido" ? row.pais : "Otros";
+            paisesMap[p] = (paisesMap[p] || 0) + 1;
+
+            if (row.clic_comprar) {
+              totalClicsComprar += 1;
+            }
+
+            if (row.entrada && row.salida) {
+              const diffMs = new Date(row.salida).getTime() - new Date(row.entrada).getTime();
+              if (diffMs > 0) {
+                totalDurationSec += Math.round(diffMs / 1000);
+                sessionsWithDuration += 1;
+              }
+            }
+          });
+
+          topPaises = Object.entries(paisesMap)
+            .map(([pais, count]) => ({ pais, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 3);
+
+          if (sessionsWithDuration > 0) {
+            const avgSec = Math.round(totalDurationSec / sessionsWithDuration);
+            const m = Math.floor(avgSec / 60);
+            const s = avgSec % 60;
+            tiempoPromedioFormatted = m > 0 ? `${m}m ${s}s` : `${s}s`;
+          }
+        }
+      } else {
+        // Fallback a estadísticas locales si Supabase no está conectado
+        const stats = loadDailyStats();
+        totalUsuarios = stats.visitors;
+        totalClicsComprar = stats.checkoutClicks;
+        topPaises = Object.entries(stats.countries)
+          .map(([pais, count]) => ({ pais, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3);
+
+        if (stats.durationSessionsCount > 0) {
+          const avg = Math.round(stats.totalDurationSeconds / stats.durationSessionsCount);
+          const m = Math.floor(avg / 60);
+          const s = avg % 60;
+          tiempoPromedioFormatted = m > 0 ? `${m}m ${s}s` : `${s}s`;
+        }
+      }
+
+      // b) Formatear lista del Top 3 Países
+      const flagsMap: Record<string, string> = {
+        Uruguay: "🇺🇾",
+        Argentina: "🇦🇷",
+        España: "🇪🇸",
+        México: "🇲🇽",
+        Chile: "🇨🇱",
+        Colombia: "🇨🇴",
+        Perú: "🇵🇪",
+        Ecuador: "🇪🇨",
+        Paraguay: "🇵🇾",
+        Bolivia: "🇧🇴",
+        EstadosUnidos: "🇺🇸",
+      };
+
+      const topPaisesStr =
+        topPaises.length > 0
+          ? topPaises
+              .map(
+                (item, idx) =>
+                  `   ${idx + 1}. ${flagsMap[item.pais] || "📍"} ${item.pais}: ${item.count} visita${item.count > 1 ? "s" : ""}`
+              )
+              .join("\n")
+          : "   Sin datos registrados";
+
+      const tasaConversion =
+        totalUsuarios > 0
+          ? ((totalClicsComprar / totalUsuarios) * 100).toFixed(1)
+          : "0.0";
+
+      // 4. Formatear mensaje limpio, profesional y elegante para Telegram
+      const reportMessage =
+        `📊 *REPORTE DIARIO DE RENDIMIENTO*\n` +
+        `📅 *Fecha:* ${uyDateParts} (23:59 Hora Uruguay)\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `👥 *Total de Visitantes Únicos:* ${totalUsuarios}\n\n` +
+        `🌎 *Top Países con Más Visitas:*\n${topPaisesStr}\n\n` +
+        `⏱ *Tiempo Promedio en la Página:* ${tiempoPromedioFormatted}\n\n` +
+        `💰 *Intenciones de Compra (Clics):* ${totalClicsComprar} (${tasaConversion}%)\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🚀 _Datos sincronizados directamente desde Supabase_`;
+
+      // 5. Enviar a Telegram
+      let tgSent = false;
+      if (botToken && chatId) {
+        const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: reportMessage,
+            parse_mode: "Markdown",
+          }),
+        });
+        const tgJson = await tgRes.json();
+        tgSent = tgJson.ok;
+      }
+
+      return res.json({
+        success: true,
+        telegramSent: tgSent,
+        date: uyDateParts,
+        metrics: {
+          totalUsuarios,
+          topPaises,
+          tiempoPromedio: tiempoPromedioFormatted,
+          totalClicsComprar,
+        },
+      });
+    } catch (err: any) {
+      console.error("Error al generar cron-report:", err);
       return res.status(500).json({ error: err.message });
     }
   });

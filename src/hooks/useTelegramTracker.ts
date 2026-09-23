@@ -1,6 +1,31 @@
 import { useEffect, useRef } from "react";
 
 /**
+ * Obtiene o genera un sessionId único y persistente para el visitante.
+ * Utiliza crypto.randomUUID() con fallback seguro para navegadores antiguos,
+ * y lo almacena en localStorage (o sessionStorage) para que se mantenga si recarga la página.
+ */
+function getOrCreateSessionId(): string {
+  if (typeof window === "undefined") return "session_init";
+  try {
+    const STORAGE_KEY = "tg_session_id";
+    let sessionId = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
+    if (!sessionId) {
+      if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        sessionId = crypto.randomUUID();
+      } else {
+        sessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).substring(2, 11);
+      }
+      localStorage.setItem(STORAGE_KEY, sessionId);
+      sessionStorage.setItem(STORAGE_KEY, sessionId);
+    }
+    return sessionId;
+  } catch {
+    return "sess_" + Date.now();
+  }
+}
+
+/**
  * Formatea el tiempo del vídeo a MM:SS asegurando un máximo de 01:19 (79 segundos).
  * Ejemplo: 30s -> "00:30", 70s -> "01:10"
  */
@@ -16,6 +41,7 @@ export function useTelegramTracker(countryName: string) {
   const hasTrackedVisitRef = useRef<boolean>(false);
   const hasSentLeaveRef = useRef<boolean>(false);
   const userNumberRef = useRef<number | null>(null);
+  const sessionIdRef = useRef<string>(getOrCreateSessionId());
 
   // Estados de seguimiento del vídeo principal (duración 01:19)
   const hasStartedVideoRef = useRef<boolean>(false);
@@ -35,7 +61,14 @@ export function useTelegramTracker(countryName: string) {
 
   const sendNotification = async (payload: any, keepalive: boolean = false) => {
     try {
-      const body = JSON.stringify(payload);
+      // Inyectar automáticamente el sessionId único en cada payload
+      const fullPayload = {
+        sessionId: sessionIdRef.current,
+        country: geoDetailsRef.current.country,
+        ...payload,
+      };
+
+      const body = JSON.stringify(fullPayload);
       if (keepalive && typeof navigator !== "undefined" && navigator.sendBeacon) {
         const blob = new Blob([body], { type: "application/json" });
         navigator.sendBeacon("/api/telegram-notify", blob);
@@ -53,7 +86,7 @@ export function useTelegramTracker(countryName: string) {
   };
 
   useEffect(() => {
-    // Evitar envío doble en la misma pestaña/sesión
+    // Evitar envío doble de la visita en la misma pestaña/sesión
     const alreadyTracked = sessionStorage.getItem("tg_visit_sent");
     const savedUserNumber = sessionStorage.getItem("tg_user_number");
     if (savedUserNumber) {
@@ -97,6 +130,7 @@ export function useTelegramTracker(countryName: string) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "visit",
+            sessionId: sessionIdRef.current,
             country,
           }),
         });
@@ -141,10 +175,11 @@ export function useTelegramTracker(countryName: string) {
   }, []);
 
   const trackCheckoutClick = (buttonLabel?: string) => {
-    // 1. Mensaje exacto de clic en botón de compra
+    // 1. Mensaje de clic en comprar con tipo click_comprar y sessionId
     sendNotification(
       {
-        type: "checkout_click",
+        type: "click_comprar",
+        sessionId: sessionIdRef.current,
         country: geoDetailsRef.current.country,
         userNumber: userNumberRef.current,
         text: buttonLabel,
@@ -169,7 +204,6 @@ export function useTelegramTracker(countryName: string) {
   };
 
   const trackVideoPlay = (currentTime: number = 0) => {
-    // Si había un temporizador de pausa pendiente, cancelarlo de inmediato
     if (pauseDebounceTimerRef.current) {
       clearTimeout(pauseDebounceTimerRef.current);
       pauseDebounceTimerRef.current = null;
@@ -200,7 +234,6 @@ export function useTelegramTracker(countryName: string) {
   };
 
   const trackVideoPause = (currentTime: number = 0) => {
-    // Si el video ya terminó o está en los últimos segundos (>= 78s), no contar como pausa
     if (hasEndedVideoRef.current || currentTime >= 78 || currentTime < 0.5) {
       return;
     }
@@ -209,7 +242,6 @@ export function useTelegramTracker(countryName: string) {
       clearTimeout(pauseDebounceTimerRef.current);
     }
 
-    // Debounce de 450ms para evitar spam al adelantar/retroceder
     pauseDebounceTimerRef.current = setTimeout(() => {
       if (hasEndedVideoRef.current) return;
       isVideoPausedRef.current = true;
@@ -239,6 +271,7 @@ export function useTelegramTracker(countryName: string) {
   };
 
   return {
+    sessionId: sessionIdRef.current,
     trackCheckoutClick,
     trackVideoPlay,
     trackVideoPause,
