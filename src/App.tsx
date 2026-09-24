@@ -3,26 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { Leaf, Sun, Droplets, Sparkles, ArrowRight, Play } from "lucide-react";
+import { Leaf, Sun, Droplets, Sparkles, ArrowRight } from "lucide-react";
 import { useGeoCurrency } from "./hooks/useGeoCurrency";
 import { useTelegramTracker } from "./hooks/useTelegramTracker";
 
 const CustomVideo = ({
   src,
-  className,
-  onTimeUpdate,
-  onPlay,
-  onPause,
-  onEnded
+  className
 }: {
   src: string;
   className?: string;
-  onTimeUpdate?: any;
-  onPlay?: (e?: any) => void;
-  onPause?: (e?: any) => void;
-  onEnded?: () => void;
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -34,33 +26,22 @@ const CustomVideo = ({
         className={className}
         controls
         preload="metadata"
-        onTimeUpdate={onTimeUpdate}
-        onPlay={onPlay}
-        onPause={onPause}
-        onEnded={onEnded}
       />
     </div>
   );
 };
 
 export default function App() {
-  const [showHeroButton, setShowHeroButton] = useState(false);
   const [timeLeft, setTimeLeft] = useState(59 * 60); // Inicia exactamente en 59 minutos (3540 segundos: 00h : 59m : 00s)
   const geo = useGeoCurrency();
-  const {
-    trackCheckoutClick,
-    trackVideoPlay,
-    trackVideoPause,
-    trackVideoEnded
-  } = useTelegramTracker(geo.countryName);
+  const { trackCheckoutClick } = useTelegramTracker(geo.countryName);
 
   useEffect(() => {
-    if (!showHeroButton) return;
     const interval = setInterval(() => {
       setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(interval);
-  }, [showHeroButton]);
+  }, []);
 
   const MOCKUP_BOOK =
     "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059099/mockup_libro_desintoxica_tu_cuerpo_en_21_dias-Photoroom.png";
@@ -69,7 +50,7 @@ export default function App() {
   const MOCKUP_PHONE =
     "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059098/mockup_celular_desintoxica_tu_cuerpo_en_21_dias-Photoroom.png";
   const AVATAR =
-    "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059369/Avatar_Abuela_Tulun.jpg";
+    "https://res.cloudinary.com/nudnxkcm/image/upload/f_auto/q_auto/Enhance_this_photo._2K_20260923223342.jpg";
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] font-sans text-[#212121] selection:bg-emerald-200 overflow-x-hidden flex flex-col w-full max-w-[100vw]">
@@ -79,138 +60,22 @@ export default function App() {
       </div>
 
       {/* SECCIÓN 1: HERO */}
-      <section className="relative overflow-hidden px-4 pt-5 pb-3 sm:px-6 md:pt-8 md:pb-4">
+      <section className="relative overflow-hidden px-4 pt-6 pb-6 sm:px-6 md:pt-10 md:pb-8">
         {/* Subtle background blob */}
         <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-emerald-900/5 blur-3xl"></div>
         <div className="absolute top-1/2 -left-24 h-64 w-64 rounded-full bg-amber-600/5 blur-3xl"></div>
 
-        <div className="mx-auto max-w-5xl relative z-10">
+        <div className="mx-auto max-w-4xl relative z-10">
           <div className="text-center">
-            <h1 className="mx-auto mb-3 max-w-4xl font-serif font-bold tracking-tight text-[#166534]">
+            <h1 className="mx-auto max-w-4xl font-serif font-bold tracking-tight text-[#166534]">
               <span className="block text-[22px] leading-[1.3] sm:text-3xl md:text-4xl lg:text-5xl sm:leading-tight font-serif">
                 <span className="block">Cómo Desinflamar Tu Vientre,</span>
                 <span className="block">Apagar El Dolor Articular</span>
-                <span className="block">Y Recuperar Tu Energía En 21 Días...</span>
-              </span>
-              <span className="mt-5 sm:mt-7 block text-xl sm:text-2xl md:text-3xl lg:text-4xl font-serif font-extrabold text-[#166534]">
-                Volviendo A La Sabiduría De Antes.
+                <span className="block">Y Recuperar Tu Energía</span>
+                <span className="block mt-1 sm:mt-2">En 21 Días...</span>
               </span>
             </h1>
-            <div className="mt-4 mb-4 sm:mb-6 flex justify-center">
-              <p className="inline-block rounded-xl bg-amber-400 px-5 py-2.5 text-base sm:text-lg font-bold text-amber-950 shadow-sm text-balance">
-                Mira el vídeo abajo que puede desaparecer en cualquier momento.
-              </p>
-            </div>
           </div>
-
-          {/* VSL VIDEO SECTION */}
-          <div className="mx-auto mb-0 sm:mb-2 w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-stone-900/5 bg-stone-900">
-            <div className="relative aspect-video w-full">
-              <CustomVideo
-                src="https://res.cloudinary.com/nudnxkcm/video/upload/v1789085259/VSL_Leandig_Page_Abuela_Tulun.mp4"
-                className="h-full w-full object-cover"
-                onPlay={(e: any) => trackVideoPlay(e?.target?.currentTime ?? 0)}
-                onPause={(e: any) => trackVideoPause(e?.target?.currentTime ?? 0)}
-                onEnded={trackVideoEnded}
-                onTimeUpdate={(e: any) => {
-                  const ct = e?.target?.currentTime ?? 0;
-                  if (ct >= 54 && !showHeroButton) {
-                    setShowHeroButton(true);
-                  }
-                  if (ct >= 78.8) {
-                    trackVideoEnded();
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          {showHeroButton && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="mt-4 sm:mt-6 flex flex-col items-center w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl ring-2 ring-red-500 overflow-hidden relative"
-            >
-              <div className="w-full bg-red-600 py-3 text-center">
-                <p className="text-white font-bold text-base sm:text-lg tracking-wide px-4">
-                  OFERTA EXCLUSIVA DE HOY
-                </p>
-              </div>
-
-              <div className="p-6 sm:p-10 flex flex-col items-center w-full">
-                <img 
-                  src={MOCKUP_BOOK} 
-                  alt="Mockup Libro" 
-                  className="w-44 sm:w-60 md:w-64 object-contain drop-shadow-2xl mb-6"
-                />
-
-                <div className="mb-8 flex flex-col items-center text-center">
-                  <span className="mb-2 text-lg sm:text-xl font-medium text-stone-500 line-through">
-                    Valor normal: {geo.originalPriceFormatted}
-                  </span>
-                  <div className="flex flex-col items-center leading-tight w-full">
-                    <span className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-[#212121] tracking-tight">
-                      Ahora solo
-                    </span>
-                    <span className="text-[32px] sm:text-5xl md:text-6xl lg:text-7xl font-serif font-extrabold tracking-tight text-[#166534] my-2 whitespace-nowrap text-center">
-                      {geo.currentPriceFormatted}
-                    </span>
-                    <p className="mt-3 text-sm sm:text-base font-bold text-stone-800 max-w-lg mx-auto text-center leading-relaxed">
-                      Valor aproximado. El precio exacto se mostrará al finalizar tu compra y puede variar según la conversión de moneda e impuestos de tu país.
-                    </p>
-                  </div>
-                </div>
-
-                <a
-                  href="https://pay.hotmart.com/W105526885V?off=qmsrqdaf&checkoutMode=10"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackCheckoutClick("Botón 1 (Debajo del Video)")}
-                  className="group relative inline-flex w-full items-center justify-center gap-2 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-4 sm:px-8 py-4 sm:py-5 text-base sm:text-xl font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 text-center leading-tight whitespace-nowrap"
-                >
-                  <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
-                    <div className="relative h-full w-8 bg-white/20" />
-                  </span>
-                  <span>QUIERO ADQUIRIR AHORA</span>
-                  <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 transition-transform group-hover:translate-x-1 shrink-0" />
-                </a>
-
-                {/* CONTADOR DEBAJO DEL BOTÓN DE COMPRAR */}
-                <div className="mt-6 sm:mt-8 flex flex-col items-center w-full bg-stone-50 border border-stone-200/80 rounded-2xl py-4 px-3 sm:px-6 shadow-sm">
-                  <p className="text-red-600 font-extrabold text-[12px] min-[380px]:text-sm sm:text-base tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 text-center whitespace-nowrap">
-                    <span className="inline-block w-2 h-2 rounded-full bg-red-600 animate-ping shrink-0" />
-                    <span>ESTA OFERTA TERMINA PRONTO</span>
-                  </p>
-                  <div className="flex gap-2 sm:gap-3 items-center justify-center">
-                    {/* HORAS */}
-                    <div className="flex flex-col items-center">
-                      <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
-                        {Math.floor(timeLeft / 3600).toString().padStart(2, '0')}
-                      </div>
-                      <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Horas</span>
-                    </div>
-                    <span className="text-stone-900 font-bold text-2xl sm:text-3xl -mt-4 sm:-mt-5 animate-pulse">:</span>
-                    {/* MINUTOS */}
-                    <div className="flex flex-col items-center">
-                      <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
-                        {Math.floor((timeLeft % 3600) / 60).toString().padStart(2, '0')}
-                      </div>
-                      <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Minutos</span>
-                    </div>
-                    <span className="text-stone-900 font-bold text-2xl sm:text-3xl -mt-4 sm:-mt-5 animate-pulse">:</span>
-                    {/* SEGUNDOS */}
-                    <div className="flex flex-col items-center">
-                      <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
-                        {(timeLeft % 60).toString().padStart(2, '0')}
-                      </div>
-                      <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Segundos</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
         </div>
       </section>
 
@@ -397,7 +262,7 @@ export default function App() {
                 href="https://pay.hotmart.com/W105526885V?off=qmsrqdaf&checkoutMode=10"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => trackCheckoutClick("Botón 2 (Oferta Final)")}
+                onClick={() => trackCheckoutClick("Botón (Oferta Final)")}
                 className="group relative inline-flex w-full items-center justify-center gap-2 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-6 py-4 sm:py-5 text-base sm:text-xl font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-14 whitespace-nowrap"
               >
                 <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
@@ -405,6 +270,39 @@ export default function App() {
                 </span>
                 <span>QUIERO ADQUIRIR AHORA</span>
               </a>
+
+              {/* CONTADOR DEBAJO DEL BOTÓN DE COMPRAR */}
+              <div className="mt-6 sm:mt-8 flex flex-col items-center w-full max-w-lg mx-auto bg-stone-50 border border-stone-200/80 rounded-2xl py-4 px-3 sm:px-6 shadow-sm">
+                <p className="text-red-600 font-extrabold text-[12px] min-[380px]:text-sm sm:text-base tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 text-center whitespace-nowrap">
+                  <span className="inline-block w-2 h-2 rounded-full bg-red-600 animate-ping shrink-0" />
+                  <span>ESTA OFERTA TERMINA PRONTO</span>
+                </p>
+                <div className="flex gap-2 sm:gap-3 items-center justify-center">
+                  {/* HORAS */}
+                  <div className="flex flex-col items-center">
+                    <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
+                      {Math.floor(timeLeft / 3600).toString().padStart(2, '0')}
+                    </div>
+                    <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Horas</span>
+                  </div>
+                  <span className="text-stone-900 font-bold text-2xl sm:text-3xl -mt-4 sm:-mt-5 animate-pulse">:</span>
+                  {/* MINUTOS */}
+                  <div className="flex flex-col items-center">
+                    <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
+                      {Math.floor((timeLeft % 3600) / 60).toString().padStart(2, '0')}
+                    </div>
+                    <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Minutos</span>
+                  </div>
+                  <span className="text-stone-900 font-bold text-2xl sm:text-3xl -mt-4 sm:-mt-5 animate-pulse">:</span>
+                  {/* SEGUNDOS */}
+                  <div className="flex flex-col items-center">
+                    <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
+                      {(timeLeft % 60).toString().padStart(2, '0')}
+                    </div>
+                    <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Segundos</span>
+                  </div>
+                </div>
+              </div>
               
               <p className="mt-6 text-sm sm:text-base text-stone-500 font-medium">
                 🔒 Pago 100% seguro. Acceso inmediato al finalizar tu orden.
