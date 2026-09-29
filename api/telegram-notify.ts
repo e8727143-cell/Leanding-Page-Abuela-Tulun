@@ -1,11 +1,12 @@
+import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 
-// Inicialización de cliente Supabase
+// Inicialización de cliente Supabase con soporte para SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY
 const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_KEY || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || "";
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
-// Caché de desduplicación en memoria para la función de Vercel
+// Caché de desduplicación en memoria para la función serverless
 const recentAlertsMap = new Map<string, number>();
 
 function cleanRecentAlerts() {
@@ -15,6 +16,58 @@ function cleanRecentAlerts() {
       recentAlertsMap.delete(key);
     }
   }
+}
+
+// Fallback de estadísticas en disco local (/tmp/) para asegurar métricas si Supabase tiene RLS activo
+const STATS_FILE = "/tmp/uy_daily_stats.json";
+
+interface DailyStats {
+  date: string;
+  visitors: number;
+  totalDurationSeconds: number;
+  durationSessionsCount: number;
+  checkoutClicks: number;
+  videoPlays: number;
+  countries: Record<string, number>;
+  summarySent: boolean;
+}
+
+function getUruguayDateStr(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Montevideo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function loadDailyStats(): DailyStats {
+  const today = getUruguayDateStr();
+  try {
+    if (fs.existsSync(STATS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(STATS_FILE, "utf-8"));
+      if (data && data.date === today) {
+        return data;
+      }
+    }
+  } catch {}
+
+  return {
+    date: today,
+    visitors: 0,
+    totalDurationSeconds: 0,
+    durationSessionsCount: 0,
+    checkoutClicks: 0,
+    videoPlays: 0,
+    countries: {},
+    summarySent: false,
+  };
+}
+
+function saveDailyStats(stats: DailyStats) {
+  try {
+    fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2), "utf-8");
+  } catch {}
 }
 
 export default async function handler(req: any, res: any) {
@@ -42,23 +95,21 @@ export default async function handler(req: any, res: any) {
       isMobile,
     } = body || {};
 
-    // 1. FILTRO ESTRICTO: Solo permitir dispositivos Móviles o Tablets (nada de PCs/computadoras)
     const userAgent = (req.headers["user-agent"] || "").toLowerCase();
     const mobileRegex = /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i;
     const tabletRegex = /android|ipad|playbook|silk|tablet/i;
-    const isMobileUA = mobileRegex.test(userAgent) || tabletRegex.test(userAgent);
-
-    if (
-      isMobile === false ||
-      (!isMobile && !isMobileUA && !userAgent.includes("mobile") && !userAgent.includes("tablet"))
-    ) {
-      return res.status(200).json({ success: true, ignored: true, reason: "desktop_device_ignored" });
-    }
+    const isMobileDetected =
+      isMobile === true ||
+      mobileRegex.test(userAgent) ||
+      tabletRegex.test(userAgent) ||
+      userAgent.includes("mobile") ||
+      userAgent.includes("tablet") ||
+      userAgent.includes("instagram");
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    // Desduplicación rápida en memoria
+    // Desduplicación rápida en memoria para evitar alertas concurrentes idénticas
     cleanRecentAlerts();
     const dedupKey = `${type}_${sessionId || ""}_${text || ""}`;
     const lastSentTime = recentAlertsMap.get(dedupKey);
@@ -74,10 +125,11 @@ export default async function handler(req: any, res: any) {
     // ==========================================
     // PERSISTENCIA EN SUPABASE
     // ==========================================
+    let supabaseSuccess = false;
     if (supabase && sessionId) {
       try {
         if (type === "visit") {
-          // Revisar si ya existe este sessionId en la tabla visitas
+          // 1. Revisar si ya existe este sessionId en la tabla visitas
           const { data: existingVisit, error: searchError } = await supabase
             .from("visitas")
             .select("id")
@@ -85,17 +137,25 @@ export default async function handler(req: any, res: any) {
             .maybeSingle();
 
           if (!searchError && !existingVisit) {
-            // Insertar nueva fila
-            await supabase.from("visitas").insert([
+            // 2. Insertar nueva fila
+            const { error: insertError } = await supabase.from("visitas").insert([
               {
                 session_id: sessionId,
                 pais: country && country !== "Desconocido" ? country : "Otros",
                 entrada: new Date().toISOString(),
               },
             ]);
+
+            if (insertError) {
+              console.error("Aviso Supabase (visitas insert):", insertError.message);
+            } else {
+              supabaseSuccess = true;
+            }
+          } else if (existingVisit) {
+            supabaseSuccess = true;
           }
 
-          // Conteo total de filas para el número real exacto
+          // 3. Conteo total de filas para el número real exacto
           const { count, error: countError } = await supabase
             .from("visitas")
             .select("*", { count: "exact", head: true });
@@ -104,20 +164,50 @@ export default async function handler(req: any, res: any) {
             activeUserNumber = count;
           }
         } else if (type === "click_comprar" || type === "checkout_click") {
-          await supabase
+          const { error: updateErr } = await supabase
             .from("visitas")
             .update({ clic_comprar: true })
             .eq("session_id", sessionId);
+
+          if (!updateErr) supabaseSuccess = true;
         } else if (type === "leave") {
           const exitTime = new Date().toISOString();
-          await supabase
+          const { error: leaveErr } = await supabase
             .from("visitas")
             .update({ salida: exitTime })
             .eq("session_id", sessionId);
+
+          if (!leaveErr) supabaseSuccess = true;
         }
       } catch (dbErr) {
         console.error("Error en operación con Supabase:", dbErr);
       }
+    }
+
+    // ==========================================
+    // PERSISTENCIA DE RESPALDO (LOCAL CACHE)
+    // ==========================================
+    const stats = loadDailyStats();
+    if (type === "visit") {
+      stats.visitors += 1;
+      if (activeUserNumber === null || activeUserNumber === 0) {
+        activeUserNumber = stats.visitors;
+      }
+      const validCountry = country && country !== "Desconocido" ? country : "Otros";
+      stats.countries[validCountry] = (stats.countries[validCountry] || 0) + 1;
+      saveDailyStats(stats);
+    } else if (type === "click_comprar" || type === "checkout_click") {
+      stats.checkoutClicks += 1;
+      saveDailyStats(stats);
+    } else if (type === "leave") {
+      if (typeof durationSeconds === "number" && durationSeconds > 0) {
+        stats.totalDurationSeconds += durationSeconds;
+        stats.durationSessionsCount += 1;
+        saveDailyStats(stats);
+      }
+    } else if (type === "video_play") {
+      stats.videoPlays += 1;
+      saveDailyStats(stats);
     }
 
     // ==========================================
@@ -127,7 +217,8 @@ export default async function handler(req: any, res: any) {
 
     if (type === "visit") {
       const countryDisplay = country && country !== "Desconocido" ? country : "Desconocido";
-      formattedMessage = `👁🗨Nuevo visitante (País: ${countryDisplay})\nUsuario: ${activeUserNumber || 1}`;
+      const deviceTag = isMobileDetected ? "📱 Móvil" : "💻 PC";
+      formattedMessage = `👁🗨Nuevo visitante (${deviceTag} · País: ${countryDisplay})\nUsuario: ${activeUserNumber || 1}`;
     } else if (type === "click_comprar" || type === "checkout_click") {
       formattedMessage = `Cliente Potencial! Tienes un CLIC EN EL BOTÓN DE COMPRA 💰💵`;
     } else if (type === "leave") {
@@ -170,6 +261,7 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({
       success: true,
       userNumber: activeUserNumber,
+      supabaseSynced: supabaseSuccess,
       result: telegramResult,
     });
   } catch (err: any) {

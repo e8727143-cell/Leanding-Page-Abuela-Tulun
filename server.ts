@@ -4,9 +4,9 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { createClient } from "@supabase/supabase-js";
 
-// Inicialización de cliente Supabase usando variables de entorno
+// Inicialización de cliente Supabase usando variables de entorno (soporta SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY)
 const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_KEY || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || "";
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 // Caché de desduplicación en memoria para evitar mensajes dobles en Telegram
@@ -36,7 +36,7 @@ export interface DailyStats {
 }
 
 function getUruguayDateStr(): string {
-  return new Intl.DateTimeFormat("es-UY", {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Montevideo",
     year: "numeric",
     month: "2-digit",
@@ -319,16 +319,17 @@ async function startServer() {
         isMobile,
       } = req.body;
 
-      // Doble filtro: verificar User-Agent en el servidor para asegurar que es móvil o tablet
+      // Identificar si es Móvil o Tablet para la etiqueta informativa
       const userAgent = (req.headers["user-agent"] || "").toLowerCase();
       const mobileRegex = /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i;
       const tabletRegex = /android|ipad|playbook|silk|tablet/i;
-      const isMobileUA = mobileRegex.test(userAgent) || tabletRegex.test(userAgent);
-
-      // Si no viene marcado como móvil desde el frontend y tampoco tiene UA de móvil/tablet, descartar (PC de escritorio)
-      if (isMobile === false || (!isMobile && !isMobileUA && !userAgent.includes("mobile") && !userAgent.includes("tablet"))) {
-        return res.json({ success: true, ignored: true, reason: "desktop_device_ignored" });
-      }
+      const isMobileDetected =
+        isMobile === true ||
+        mobileRegex.test(userAgent) ||
+        tabletRegex.test(userAgent) ||
+        userAgent.includes("mobile") ||
+        userAgent.includes("tablet") ||
+        userAgent.includes("instagram");
 
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -361,13 +362,16 @@ async function startServer() {
 
             if (!searchError && !existingVisit) {
               // 2. Si NO existe, insertar nueva fila
-              await supabase.from("visitas").insert([
+              const { error: insertError } = await supabase.from("visitas").insert([
                 {
                   session_id: sessionId,
                   pais: country && country !== "Desconocido" ? country : "Otros",
                   entrada: new Date().toISOString(),
                 },
               ]);
+              if (insertError) {
+                console.error("Aviso Supabase (visitas insert):", insertError.message);
+              }
             }
 
             // 3. Conteo total de filas en la tabla visitas para el número real exacto
@@ -397,28 +401,28 @@ async function startServer() {
         }
       }
 
-      // Si Supabase no está configurado o falló, fallback a estadísticas en memoria/disco local
-      if (activeUserNumber === null) {
-        const stats = loadDailyStats();
-        if (type === "visit") {
-          stats.visitors += 1;
+      // Siempre mantener sincronizado el respaldo local de métricas
+      const stats = loadDailyStats();
+      if (type === "visit") {
+        stats.visitors += 1;
+        if (activeUserNumber === null || activeUserNumber === 0) {
           activeUserNumber = stats.visitors;
-          const validCountry = country && country !== "Desconocido" ? country : "Otros";
-          stats.countries[validCountry] = (stats.countries[validCountry] || 0) + 1;
-          saveDailyStats();
-        } else if (type === "leave") {
-          if (typeof durationSeconds === "number" && durationSeconds > 0) {
-            stats.totalDurationSeconds += durationSeconds;
-            stats.durationSessionsCount += 1;
-            saveDailyStats();
-          }
-        } else if (type === "click_comprar" || type === "checkout_click") {
-          stats.checkoutClicks += 1;
-          saveDailyStats();
-        } else if (type === "video_play") {
-          stats.videoPlays += 1;
+        }
+        const validCountry = country && country !== "Desconocido" ? country : "Otros";
+        stats.countries[validCountry] = (stats.countries[validCountry] || 0) + 1;
+        saveDailyStats();
+      } else if (type === "leave") {
+        if (typeof durationSeconds === "number" && durationSeconds > 0) {
+          stats.totalDurationSeconds += durationSeconds;
+          stats.durationSessionsCount += 1;
           saveDailyStats();
         }
+      } else if (type === "click_comprar" || type === "checkout_click") {
+        stats.checkoutClicks += 1;
+        saveDailyStats();
+      } else if (type === "video_play") {
+        stats.videoPlays += 1;
+        saveDailyStats();
       }
 
       // Formatear mensaje para Telegram
@@ -426,7 +430,8 @@ async function startServer() {
 
       if (type === "visit") {
         const countryDisplay = country && country !== "Desconocido" ? country : "Desconocido";
-        formattedMessage = `👁🗨Nuevo visitante (País: ${countryDisplay})\nUsuario: ${activeUserNumber || 1}`;
+        const deviceTag = isMobileDetected ? "📱 Móvil" : "💻 PC";
+        formattedMessage = `👁🗨Nuevo visitante (${deviceTag} · País: ${countryDisplay})\nUsuario: ${activeUserNumber || 1}`;
       } else if (type === "video_play") {
         formattedMessage = `Visitante Inició el Vídeo...🎬`;
       } else if (type === "video_pause") {
@@ -512,15 +517,46 @@ async function startServer() {
 
       if (supabase) {
         // Consultar visitas registradas dentro del día de Uruguay
-        const { data: rows, error: fetchError } = await supabase
+        let { data: rows, error: fetchError } = await supabase
           .from("visitas")
           .select("id, session_id, pais, entrada, salida, clic_comprar")
           .gte("entrada", startOfDayUY)
           .lte("entrada", endOfDayUY);
 
         if (fetchError) {
-          console.error("Error al consultar Supabase para el reporte cron:", fetchError);
-        } else if (rows) {
+          console.error("Error al consultar Supabase para el reporte cron:", fetchError.message);
+        }
+
+        // Si dio 0 filas con filtro ISO estricto, verificar registros recientes y filtrar por día en JS
+        if (!rows || rows.length === 0) {
+          const { data: recentRows } = await supabase
+            .from("visitas")
+            .select("id, session_id, pais, entrada, salida, clic_comprar")
+            .order("entrada", { ascending: false })
+            .limit(200);
+
+          if (recentRows && recentRows.length > 0) {
+            const matchingToday = recentRows.filter((row) => {
+              if (!row.entrada) return false;
+              try {
+                const entryDate = new Intl.DateTimeFormat("en-CA", {
+                  timeZone: "America/Montevideo",
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                }).format(new Date(row.entrada));
+                return entryDate === uyDateParts;
+              } catch {
+                return false;
+              }
+            });
+            if (matchingToday.length > 0) {
+              rows = matchingToday;
+            }
+          }
+        }
+
+        if (rows && rows.length > 0) {
           totalUsuarios = rows.length;
 
           // a) Top países
@@ -557,21 +593,25 @@ async function startServer() {
             tiempoPromedioFormatted = m > 0 ? `${m}m ${s}s` : `${s}s`;
           }
         }
-      } else {
-        // Fallback a estadísticas locales si Supabase no está conectado
-        const stats = loadDailyStats();
-        totalUsuarios = stats.visitors;
-        totalClicsComprar = stats.checkoutClicks;
-        topPaises = Object.entries(stats.countries)
-          .map(([pais, count]) => ({ pais, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 3);
+      }
 
-        if (stats.durationSessionsCount > 0) {
-          const avg = Math.round(stats.totalDurationSeconds / stats.durationSessionsCount);
-          const m = Math.floor(avg / 60);
-          const s = avg % 60;
-          tiempoPromedioFormatted = m > 0 ? `${m}m ${s}s` : `${s}s`;
+      // Si Supabase tuvo 0 filas o falló por políticas RLS, recurrimos al respaldo local
+      if (totalUsuarios === 0) {
+        const stats = loadDailyStats();
+        if (stats.visitors > 0 || stats.checkoutClicks > 0) {
+          totalUsuarios = stats.visitors;
+          totalClicsComprar = stats.checkoutClicks;
+          topPaises = Object.entries(stats.countries)
+            .map(([pais, count]) => ({ pais, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 3);
+
+          if (stats.durationSessionsCount > 0) {
+            const avg = Math.round(stats.totalDurationSeconds / stats.durationSessionsCount);
+            const m = Math.floor(avg / 60);
+            const s = avg % 60;
+            tiempoPromedioFormatted = m > 0 ? `${m}m ${s}s` : `${s}s`;
+          }
         }
       }
 

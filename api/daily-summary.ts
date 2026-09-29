@@ -14,7 +14,7 @@ interface DailyStats {
 }
 
 function getUruguayDateStr(): string {
-  return new Intl.DateTimeFormat("es-UY", {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Montevideo",
     year: "numeric",
     month: "2-digit",
