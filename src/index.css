@@ -1,21 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-  --font-serif: "Merriweather", "Playfair Display", Georgia, serif;
-  --font-display: "Playfair Display", "Merriweather", Georgia, serif;
+  --font-poppins: "Poppins", sans-serif;
+  --font-lato: "Lato", sans-serif;
+  --font-opensans: "Open Sans", sans-serif;
+  --font-montserrat: "Montserrat", sans-serif;
+  --font-sans: "Lato", sans-serif;
 }
 
 body {
-  color: #212121;
-  background-color: #FDFBF7;
-  font-family: var(--font-sans);
+  color: #2C3E50;
+  background-color: #FAF9F6;
+  font-family: var(--font-lato);
   font-size: 17px;
-  line-height: 1.65;
+  line-height: 1.7;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+@media (min-width: 640px) {
+  body {
+    font-size: 19px;
+  }
 }
 
 p, li, span {

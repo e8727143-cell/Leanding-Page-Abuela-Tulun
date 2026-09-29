@@ -3,18 +3,30 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef } from "react";
-import { motion } from "motion/react";
-import { Leaf, Sun, Droplets, Sparkles, ArrowRight } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { 
+  ArrowRight, 
+  ShieldCheck, 
+  Smartphone, 
+  Star,
+  CheckCircle2,
+  MessageCircle
+} from "lucide-react";
 import { useGeoCurrency } from "./hooks/useGeoCurrency";
 import { useTelegramTracker } from "./hooks/useTelegramTracker";
 
 const CustomVideo = ({
   src,
-  className
+  className,
+  onPlay,
+  onPause,
+  onEnded,
 }: {
   src: string;
   className?: string;
+  onPlay?: (currentTime: number) => void;
+  onPause?: (currentTime: number) => void;
+  onEnded?: () => void;
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -25,16 +37,35 @@ const CustomVideo = ({
         src={src}
         className={className}
         controls
+        playsInline
         preload="metadata"
+        onPlay={() => {
+          if (videoRef.current && onPlay) {
+            onPlay(videoRef.current.currentTime);
+          }
+        }}
+        onPause={() => {
+          if (videoRef.current && onPause) {
+            onPause(videoRef.current.currentTime);
+          }
+        }}
+        onEnded={() => {
+          if (onEnded) onEnded();
+        }}
       />
     </div>
   );
 };
 
 export default function App() {
-  const [timeLeft, setTimeLeft] = useState(59 * 60); // Inicia exactamente en 59 minutos (3540 segundos: 00h : 59m : 00s)
+  const [timeLeft, setTimeLeft] = useState(48 * 60 + 20); // 48 minutos de urgencia
   const geo = useGeoCurrency();
-  const { trackCheckoutClick } = useTelegramTracker(geo.countryName);
+  const { 
+    trackCheckoutClick, 
+    trackVideoPlay, 
+    trackVideoPause, 
+    trackVideoEnded 
+  } = useTelegramTracker(geo.countryName);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -43,279 +74,450 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const HOTMART_URL = "https://pay.hotmart.com/W105526885V?off=qmsrqdaf&checkoutMode=10";
+  const WHATSAPP_URL = "https://wa.me/?text=Hola%20Abuela%20Griselda,%20tengo%20una%20duda%20sobre%20el%20Cuaderno%20de%20100%20Recetas";
+
   const MOCKUP_BOOK =
-    "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059099/mockup_libro_desintoxica_tu_cuerpo_en_21_dias-Photoroom.png";
-  const MOCKUP_TABLET =
-    "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059098/mockup_tablet_desintoxica_tu_cuerpo_en_21_dias-Photoroom.png";
+    "https://res.cloudinary.com/nudnxkcm/image/upload/v1790647223/Create_3D_book_mockup_2K_20260928202131-Photoroom.png";
   const MOCKUP_PHONE =
-    "https://res.cloudinary.com/nudnxkcm/image/upload/v1789059098/mockup_celular_desintoxica_tu_cuerpo_en_21_dias-Photoroom.png";
+    "https://res.cloudinary.com/nudnxkcm/image/upload/v1790648105/Create_3D_phone_mockup_2K_20260928203734-Photoroom.png";
   const AVATAR =
     "https://res.cloudinary.com/nudnxkcm/image/upload/f_auto/q_auto/Enhance_this_photo._2K_20260923223342.jpg";
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] font-sans text-[#212121] selection:bg-emerald-200 overflow-x-hidden flex flex-col w-full max-w-[100vw]">
-      {/* BANNER SUPERIOR DE ADVERTENCIA */}
-      <div className="bg-amber-400 px-4 py-2.5 text-center text-base font-bold tracking-normal text-amber-950 sm:text-lg">
-        Atención: Para la mujer que siente que su propio cuerpo se convirtió en su enemigo.
-      </div>
-
-      {/* SECCIÓN 1: HERO */}
-      <section className="relative overflow-hidden px-4 pt-6 pb-6 sm:px-6 md:pt-10 md:pb-8">
-        {/* Subtle background blob */}
-        <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-emerald-900/5 blur-3xl"></div>
-        <div className="absolute top-1/2 -left-24 h-64 w-64 rounded-full bg-amber-600/5 blur-3xl"></div>
-
-        <div className="mx-auto max-w-4xl relative z-10">
-          <div className="text-center">
-            <h1 className="mx-auto max-w-4xl font-serif font-bold tracking-tight text-[#166534]">
-              <span className="block text-[22px] leading-[1.3] sm:text-3xl md:text-4xl lg:text-5xl sm:leading-tight font-serif">
-                <span className="block">Cómo Desinflamar Tu Vientre,</span>
-                <span className="block">Apagar El Dolor Articular</span>
-                <span className="block">Y Recuperar Tu Energía</span>
-                <span className="block mt-1 sm:mt-2">En 21 Días...</span>
-              </span>
-            </h1>
-          </div>
+    <div className="min-h-screen bg-[#FAF9F6] font-lato text-[#2C3E50] selection:bg-[#A8C99A]/40 overflow-x-hidden flex flex-col w-full max-w-[100vw]">
+      
+      {/* BARRA SUPERIOR DE GANCHO INSTAGRAM REEL (sin emoji de planta) */}
+      <aside aria-label="Aviso de Reel" className="bg-[#A8C99A]/20 border-b border-[#A8C99A]/40 px-3 py-2 text-center text-[#2C3E50] text-[15px] sm:text-[16px] font-medium">
+        <div className="max-w-2xl mx-auto">
+          <p className="leading-snug">
+            ¿Llegaste desde Instagram? Aquí tienes la guía completa que viste en mi video.
+          </p>
         </div>
-      </section>
+      </aside>
 
-      {/* SECCIÓN 2: EL PROBLEMA */}
-      <section className="bg-white px-4 pt-6 pb-12 sm:px-6 md:pt-8 md:pb-16">
-        <div className="mx-auto max-w-3xl">
-          <div className="space-y-6 text-lg sm:text-xl md:text-2xl leading-[1.75] text-[#212121]">
-            <p>
-              Hija, respira. Y por un momento, deja de culparte.
-            </p>
-            <p>
-              Sé lo que has pensado frente al espejo. Te preguntas por qué te levantas con el vientre hinchado, por qué tus rodillas duelen y tu espalda se queja. Estás agotada de hacer dietas que te matan de hambre para luego abandonarlas sintiéndote culpable.
-            </p>
-            <p>
-              Quizá alguien te dijo que es simplemente la edad, que después de los 40 es normal.
-            </p>
-            <p className="font-serif font-bold text-[#166534] text-xl sm:text-2xl md:text-3xl">
-              Pero escucha bien a esta vieja abuela: Tu cuerpo no está roto.
-            </p>
-            <p>
-              Ha soportado noches sin dormir, estrés, cambios hormonales y tantas veces en las que pusiste a todos los demás primero. La industria farmacéutica quiere que creas que la única salida es vivir tomando analgésicos. Pero tu cuerpo es como una antigua casa de campo: no está enojada contigo, simplemente necesita atención y que abras las ventanas.
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* SECCIÓN 1: HERO CON GANCHO DE REEL */}
+      <header className="relative px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12 max-w-2xl mx-auto w-full text-center">
+        <div className="space-y-4 sm:space-y-5">
 
-      {/* SECCIÓN 3: TESTIMONIOS Y LA AUTORIDAD */}
-      <section className="bg-[#14532D] px-4 py-12 text-stone-50 sm:px-6 md:py-16">
-        <div className="mx-auto max-w-6xl">
+          {/* Titular: Poppins 28-36px mobile / 36-48px desktop / Bold 700 */}
+          <h1 className="font-poppins font-bold text-[#2C3E50] text-[30px] sm:text-[40px] md:text-[44px] leading-[1.2] tracking-tight text-balance">
+            Esa hinchazón de panza y el dolor de rodillas que te despierta a las 3 AM… tiene solución en tu cocina.
+          </h1>
 
-          {/* TESTIMONIOS */}
-          <div className="mb-12 sm:mb-16">
-            <div className="text-center mb-6 sm:mb-8">
-              <h2 className="mx-auto max-w-2xl font-serif text-2xl font-bold leading-snug text-[#FDFBF7] sm:text-3xl md:text-4xl text-balance">
-                Ellas ya desintoxicaron su cuerpo y apagaron el dolor
-              </h2>
+          {/* Subtítulo / Body: Lato 16-18px mobile / 18-20px desktop / Regular 400 */}
+          <p className="font-lato font-normal text-[17px] sm:text-[19px] text-[#2C3E50]/85 leading-[1.65] max-w-xl mx-auto">
+            Miles de mujeres mayores de 45 años ya apagaron el dolor sin pastillas ni recetas complicadas. Letra grande y lista en 10 minutos.
+          </p>
+
+          {/* Imagen de Portada del Libro */}
+          <div className="py-2 flex justify-center">
+            <div className="relative group max-w-[240px] sm:max-w-[280px]">
+              <div className="absolute -inset-3 rounded-3xl bg-[#A8C99A]/25 blur-xl -z-10"></div>
+              <img
+                src={MOCKUP_BOOK}
+                alt="Cuaderno 100 Recetas de la Abuela Para Sanar"
+                className="w-48 sm:w-60 mx-auto object-contain drop-shadow-xl"
+              />
             </div>
+          </div>
 
-            {/* Slider móvil / Grid en desktop para videos 9:16 */}
-            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* CTA Principal: Open Sans 16px mobile / 16-18px desktop / Bold 700 */}
+          <div className="flex flex-col items-center">
+            <a
+              href={HOTMART_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackCheckoutClick("Botón (Hero - Ver cómo funciona)")}
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-[#4A7C59] hover:bg-[#3D684A] text-white font-opensans font-bold text-[16px] sm:text-[18px] min-h-[56px] py-4 px-8 rounded-[12px] shadow-md shadow-[#4A7C59]/25 transition-transform active:scale-[0.98] text-center"
+            >
+              <span>QUIERO MI CUADERNO AHORA →</span>
+            </a>
+          </div>
+
+        </div>
+      </header>
+
+      {/* SECCIÓN 2: TESTIMONIOS Y VIDEOS */}
+      <section className="bg-white/90 border-y border-[#E8D5B7] px-4 py-8 sm:py-12">
+        <div className="max-w-xl mx-auto space-y-5">
+          
+          {/* Subtítulo H2: Poppins 20-24px mobile / 24-28px desktop / SemiBold 600 */}
+          <h2 className="font-poppins font-semibold text-[22px] sm:text-[26px] text-[#2C3E50] text-center leading-tight">
+            Ellas te cuentan su cambio:
+          </h2>
+
+          {/* Videos de Testimonios Reales en Formato Vertical 9:16 (Instagram Reels) */}
+          <div className="pt-1">
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-3 px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {[
                 "https://res.cloudinary.com/nudnxkcm/video/upload/v1789090995/Testimonio_1_Abuela_tulun.mp4",
                 "https://res.cloudinary.com/nudnxkcm/video/upload/v1789090994/Testimonio_2_Abuela_tulun.mp4",
                 "https://res.cloudinary.com/nudnxkcm/video/upload/v1789090998/Testimonio_3_Abuela_tulun.mp4"
               ].map((url, idx) => (
-                <div key={idx} className="relative w-[75vw] sm:w-auto snap-center rounded-2xl overflow-hidden bg-black shadow-2xl ring-1 ring-white/10 shrink-0 flex items-center justify-center">
+                <div key={idx} className="relative w-[210px] min-[400px]:w-[230px] sm:w-[250px] aspect-[9/16] snap-center rounded-[18px] overflow-hidden bg-black shadow-lg border border-[#E8D5B7]/60 shrink-0 flex items-center justify-center">
                   <CustomVideo 
                     src={url} 
-                    className="w-full h-auto max-h-[70vh] sm:max-h-[500px] object-contain bg-black"
+                    className="w-full h-full object-cover bg-black"
+                    onPlay={(curr) => trackVideoPlay(curr)}
+                    onPause={(curr) => trackVideoPause(curr)}
+                    onEnded={() => trackVideoEnded()}
                   />
                 </div>
               ))}
             </div>
+            <p className="text-center text-[13px] text-[#2C3E50]/60 mt-1">
+              Desliza para ver más videos →
+            </p>
           </div>
 
-          <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
-            <div className="relative mx-auto w-full max-w-[260px] sm:max-w-sm lg:mx-0 lg:max-w-none">
-              <div className="absolute -inset-3 sm:-inset-4 rounded-2xl bg-emerald-800/50 blur-lg"></div>
+          {/* Testimonios escritos naturales con nombre completo */}
+          <div className="grid gap-3 pt-1">
+            <div className="p-4 sm:p-5 rounded-[14px] bg-[#FAF9F6] border border-[#E8D5B7]">
+              <p className="text-[16px] sm:text-[17px] italic text-[#2C3E50] leading-relaxed">
+                “Jamás pensé que funcionaría tan bien para mí. Con el té de banana y canela dormí 7 horas seguidas por primera vez en años.”
+              </p>
+              <p className="mt-2 font-bold text-[15px] text-[#4A7C59]">
+                — Carmen Rodríguez, de Medellín
+              </p>
+            </div>
+            <div className="p-4 sm:p-5 rounded-[14px] bg-[#FAF9F6] border border-[#E8D5B7]">
+              <p className="text-[16px] sm:text-[17px] italic text-[#2C3E50] leading-relaxed">
+                “Lo mejor que compré este año. Todo se prepara con lo que una ya tiene en la cocina.”
+              </p>
+              <p className="mt-2 font-bold text-[15px] text-[#4A7C59]">
+                — Teresa Morales, de Puebla
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* SECCIÓN 3: EL PROBLEMA (Español neutro y empático) */}
+      <section className="px-4 py-10 sm:px-6 sm:py-14 max-w-2xl mx-auto w-full space-y-5 text-[17px] sm:text-[19px] leading-[1.75] text-[#2C3E50]">
+        
+        <h2 className="font-poppins font-semibold text-[22px] sm:text-[26px] text-[#2C3E50] leading-tight">
+          Sé exactamente cómo te sientes...
+        </h2>
+
+        <ul className="space-y-3 bg-white/90 p-5 rounded-[14px] border border-[#E8D5B7]">
+          <li className="flex items-start gap-3">
+            <span className="text-[#A8C99A] font-bold text-xl leading-none mt-1">•</span>
+            <span>Te despiertas cansada y con el cuerpo rígido aunque duermas suficientes horas.</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-[#A8C99A] font-bold text-xl leading-none mt-1">•</span>
+            <span>Comes liviano y a las dos horas tienes la panza hinchada como un globo.</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-[#A8C99A] font-bold text-xl leading-none mt-1">•</span>
+            <span>Has gastado en pastillas de farmacia que solo tapan el dolor por unas horas y te dejan el estómago peor.</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-[#A8C99A] font-bold text-xl leading-none mt-1">•</span>
+            <span>Te dijeron que "son cosas de la edad" y te preguntas si ya es tarde para sentirte bien.</span>
+          </li>
+        </ul>
+
+        <p className="font-poppins font-semibold text-[#4A7C59] text-[19px] sm:text-[21px] leading-snug">
+          No estás sola. Y no es tu culpa.
+        </p>
+
+        <p>
+          Tu cuerpo no está roto: solo necesitas que alguien te explique, con calma, qué hacer con la sabiduría natural que ya tienes en casa.
+        </p>
+
+      </section>
+
+      {/* SECCIÓN 4: LA SOLUCIÓN VISUAL (Foto de 84 años agrandada) */}
+      <section className="bg-white/90 border-y border-[#E8D5B7] px-4 py-10 sm:px-6 sm:py-14">
+        <div className="max-w-2xl mx-auto space-y-6 text-[17px] sm:text-[19px] leading-[1.75] text-[#2C3E50]">
+          
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-2 text-center sm:text-left">
+            <div className="relative group shrink-0">
+              <div className="absolute -inset-2.5 rounded-[26px] bg-[#A8C99A]/30 blur-md -z-10"></div>
               <img
                 src={AVATAR}
-                alt="Autora"
-                className="relative aspect-[4/5] w-full rounded-2xl object-cover shadow-2xl shadow-black/40 ring-1 ring-white/10"
+                alt="Abuela Griselda a sus 84 años"
+                className="w-52 h-52 sm:w-60 sm:h-60 md:w-64 md:h-64 rounded-[22px] object-cover border-4 border-[#A8C99A] shadow-lg mx-auto"
               />
             </div>
-
-            <div className="space-y-5 text-center lg:text-left">
-              <h2 className="font-serif text-2xl font-bold leading-snug text-[#FDFBF7] sm:text-3xl md:text-4xl">
-                El Método Ancestral de 21 Días
+            <div className="space-y-2">
+              <h2 className="font-poppins font-semibold text-[22px] sm:text-[26px] text-[#2C3E50] leading-tight">
+                ¿Qué es “100 Recetas de la Abuela”?
               </h2>
-
-              <p className="text-lg leading-[1.7] text-emerald-100 sm:text-xl md:text-2xl">
-                No quiero darte pociones mágicas ni que vivas contando calorías con angustia. Quiero enseñarte a regresar a lo sencillo: comida real, plantas utilizadas con prudencia, movimiento suave y descanso.
+              <p className="text-[#4A7C59] font-medium text-[17px] sm:text-[18px] leading-relaxed">
+                El cuaderno secreto de cocina recopilado durante más de 40 años por mí, Griselda, a mis <strong>84 años</strong>.
               </p>
-
-              <div className="rounded-xl border border-emerald-700 bg-emerald-900/50 p-4 sm:p-5 md:p-6 backdrop-blur-sm text-center sm:text-left">
-                <p className="text-base sm:text-xl font-bold text-amber-300 leading-snug text-balance">
-                  El método ancestral para deshinchar tu vientre, frenar el dolor y reactivar tu metabolismo.
-                </p>
-              </div>
+              <p className="text-[#2C3E50]/80 text-[16px] sm:text-[17px] leading-relaxed">
+                Todo lo que comparto en mis videos, ahora reunido y ordenado para que lo tengas siempre a mano.
+              </p>
             </div>
           </div>
+
+          <div className="space-y-3 pt-2">
+            <div className="flex items-start gap-3 p-3.5 rounded-[12px] bg-[#FAF9F6] border border-[#A8C99A]/40">
+              <CheckCircle2 className="w-6 h-6 text-[#4A7C59] shrink-0 mt-0.5" />
+              <span><strong>100% ingredientes de alacena y verdulería:</strong> Limón, canela, romero, cúrcuma, repollo, jengibre. Cero polvos raros de internet.</span>
+            </div>
+            <div className="flex items-start gap-3 p-3.5 rounded-[12px] bg-[#FAF9F6] border border-[#A8C99A]/40">
+              <CheckCircle2 className="w-6 h-6 text-[#4A7C59] shrink-0 mt-0.5" />
+              <span><strong>Letra grande para no forzar la vista:</strong> Cada receta completa en su propia página con medidas caseras exactas.</span>
+            </div>
+            <div className="flex items-start gap-3 p-3.5 rounded-[12px] bg-[#FAF9F6] border border-[#A8C99A]/40">
+              <CheckCircle2 className="w-6 h-6 text-[#4A7C59] shrink-0 mt-0.5" />
+              <span><strong>Listas en 5 a 15 minutos:</strong> Explicado paso a paso con minutos y cuándo tomarlo para un alivio suave y seguro.</span>
+            </div>
+          </div>
+
+          {/* Imagen de producto en uso */}
+          <div className="pt-2 text-center">
+            <img
+              src={MOCKUP_PHONE}
+              alt="Cuaderno abierto en celular"
+              className="w-40 sm:w-48 mx-auto object-contain drop-shadow-md"
+            />
+            <p className="mt-2 text-[16px] font-bold text-[#4A7C59]">
+              “Así de simple funciona: un solo toque en tu celular y ya lo estás leyendo.”
+            </p>
+          </div>
+
         </div>
       </section>
 
-      {/* SECCIÓN 4: ENTREGABLES */}
-      <section className="px-4 py-12 sm:px-6 md:py-16">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-8 text-center sm:mb-12">
-            <h2 className="font-serif text-2xl font-bold text-[#166534] sm:text-3xl md:text-4xl">
-              Tu Transformación<br />Paso a Paso
-            </h2>
-          </div>
+      {/* SECCIÓN 6: QUÉ INCLUYE EXACTAMENTE */}
+      <section id="oferta" className="bg-white/90 border-y border-[#E8D5B7] px-4 py-10 sm:px-6 sm:py-14">
+        <div className="max-w-2xl mx-auto rounded-[24px] bg-[#FAF9F6] p-6 sm:p-9 border border-[#E8D5B7] shadow-md text-center space-y-6">
+          
+          <span className="inline-block px-4 py-1.5 rounded-full bg-[#A8C99A]/25 border border-[#A8C99A]/50 text-[#2C3E50] font-bold text-[14px] sm:text-[15px] tracking-wide">
+            OFERTA EXCLUSIVA PARA QUIEN VIENE DE INSTAGRAM
+          </span>
 
-          <div className="grid gap-5 sm:gap-6 lg:gap-8 md:grid-cols-2">
-            {/* Item 1 */}
-            <div className="group rounded-2xl bg-white p-6 sm:p-7 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10">
-              <div className="mb-3 sm:mb-4 inline-flex rounded-xl bg-emerald-100 p-3 text-[#166534]">
-                <Droplets className="h-6 w-6 sm:h-7 sm:w-7" />
-              </div>
-              <h3 className="mb-2 text-xl sm:text-2xl font-serif font-bold text-[#212121]">
-                Fase 1 (Días 1-7)<br />
-                <span className="text-[#B45309]">Drenaje Profundo</span>
-              </h3>
-              <p className="text-base sm:text-lg text-[#212121] leading-[1.65]">
-                Expulsa el líquido retenido y la hinchazón severa. Volverás a abrocharte el pantalón sin que te apriete.
-              </p>
-            </div>
+          <h2 className="font-poppins font-semibold text-[22px] sm:text-[26px] text-[#2C3E50] leading-tight">
+            Todo lo que incluye tu acceso hoy:
+          </h2>
 
-            {/* Item 2 */}
-            <div className="group rounded-2xl bg-white p-6 sm:p-7 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10">
-              <div className="mb-3 sm:mb-4 inline-flex rounded-xl bg-emerald-100 p-3 text-[#166534]">
-                <Sun className="h-6 w-6 sm:h-7 sm:w-7" />
-              </div>
-              <h3 className="mb-2 text-xl sm:text-2xl font-serif font-bold text-[#212121]">
-                Fase 2 (Días 8-14)<br />
-                <span className="text-[#B45309]">Reseteo Metabólico</span>
-              </h3>
-              <p className="text-base sm:text-lg text-[#212121] leading-[1.65]">
-                Usa las combinaciones exactas para apagar la resistencia a la insulina y derretir la grasa estancada.
-              </p>
-            </div>
-
-            {/* Item 3 */}
-            <div className="group rounded-2xl bg-white p-6 sm:p-7 shadow-lg shadow-emerald-900/5 ring-1 ring-stone-200 transition-all hover:shadow-xl hover:shadow-emerald-900/10 sm:col-span-2 md:col-span-1 lg:col-span-2 lg:max-w-xl lg:mx-auto lg:w-full">
-              <div className="mb-3 sm:mb-4 inline-flex rounded-xl bg-emerald-100 p-3 text-[#166534]">
-                <Leaf className="h-6 w-6 sm:h-7 sm:w-7" />
-              </div>
-              <h3 className="mb-2 text-xl sm:text-2xl font-serif font-bold text-[#212121]">
-                Fase 3 (Días 15-21)<br />
-                <span className="text-[#B45309]">Alivio y Rejuvenecimiento</span>
-              </h3>
-              <p className="text-base sm:text-lg text-[#212121] leading-[1.65]">
-                Recetas antiinflamatorias intensivas que apagan el fuego en tus rodillas, lumbares y articulaciones.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SECCIÓN 5: CIERRE Y CTA FINAL */}
-      <section id="checkout" className="bg-[#FDFBF7] px-4 py-12 sm:px-6 md:py-16 border-t border-stone-200">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="flex flex-col items-center">
-            {/* CAJA DE OFERTA */}
-            <div className="w-full max-w-3xl rounded-3xl bg-white p-6 sm:p-10 shadow-2xl ring-1 ring-stone-200 mb-8 sm:mb-10 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600"></div>
-              
-              <div className="mx-auto mb-8 flex max-w-2xl flex-wrap justify-center items-end gap-2 sm:gap-4">
-                <img
-                  src={MOCKUP_TABLET}
-                  alt="Mockup Tablet"
-                  className="w-24 sm:w-32 object-contain drop-shadow-xl md:w-48 -mb-2 sm:-mb-6 hidden sm:block"
-                />
-                <img
-                  src={MOCKUP_BOOK}
-                  alt="Mockup Libro"
-                  className="z-10 w-48 sm:w-64 object-contain drop-shadow-2xl md:w-80"
-                />
-                <img
-                  src={MOCKUP_PHONE}
-                  alt="Mockup Celular"
-                  className="w-16 sm:w-24 object-contain drop-shadow-xl md:w-36 -mb-1 sm:-mb-3 hidden sm:block"
-                />
-              </div>
-
-              <div className="mb-8 flex flex-col items-center text-center">
-                <span className="mb-2 text-lg sm:text-xl font-medium text-stone-500 line-through">
-                  Valor normal: {geo.originalPriceFormatted}
-                </span>
-                <div className="flex flex-col items-center leading-tight w-full">
-                  <span className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-[#212121] tracking-tight">
-                    Ahora solo
-                  </span>
-                  <span className="text-[32px] sm:text-5xl md:text-6xl lg:text-7xl font-serif font-extrabold tracking-tight text-[#166534] my-2 whitespace-nowrap text-center">
-                    {geo.currentPriceFormatted}
-                  </span>
-                  <p className="mt-3 text-sm sm:text-base font-bold text-stone-800 max-w-lg mx-auto text-center leading-relaxed">
-                    Valor aproximado. El precio exacto se mostrará al finalizar tu compra y puede variar según la conversión de moneda e impuestos de tu país.
-                  </p>
-                </div>
-              </div>
-
-              <a
-                href="https://pay.hotmart.com/W105526885V?off=qmsrqdaf&checkoutMode=10"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackCheckoutClick("Botón (Oferta Final)")}
-                className="group relative inline-flex w-full items-center justify-center gap-2 sm:gap-3 overflow-hidden rounded-full bg-[#15803d] px-6 py-4 sm:py-5 text-base sm:text-xl font-bold text-white shadow-[0_8px_30px_rgb(21,128,61,0.3)] transition-all hover:scale-105 hover:bg-[#166534] hover:shadow-[0_8px_40px_rgb(21,128,61,0.4)] active:scale-95 sm:w-auto md:px-14 whitespace-nowrap"
-              >
-                <span className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
-                  <div className="relative h-full w-12 bg-white/20" />
-                </span>
-                <span>QUIERO ADQUIRIR AHORA</span>
-              </a>
-
-              {/* CONTADOR DEBAJO DEL BOTÓN DE COMPRAR */}
-              <div className="mt-6 sm:mt-8 flex flex-col items-center w-full max-w-lg mx-auto bg-stone-50 border border-stone-200/80 rounded-2xl py-4 px-3 sm:px-6 shadow-sm">
-                <p className="text-red-600 font-extrabold text-[12px] min-[380px]:text-sm sm:text-base tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 text-center whitespace-nowrap">
-                  <span className="inline-block w-2 h-2 rounded-full bg-red-600 animate-ping shrink-0" />
-                  <span>ESTA OFERTA TERMINA PRONTO</span>
-                </p>
-                <div className="flex gap-2 sm:gap-3 items-center justify-center">
-                  {/* HORAS */}
-                  <div className="flex flex-col items-center">
-                    <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
-                      {Math.floor(timeLeft / 3600).toString().padStart(2, '0')}
-                    </div>
-                    <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Horas</span>
-                  </div>
-                  <span className="text-stone-900 font-bold text-2xl sm:text-3xl -mt-4 sm:-mt-5 animate-pulse">:</span>
-                  {/* MINUTOS */}
-                  <div className="flex flex-col items-center">
-                    <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
-                      {Math.floor((timeLeft % 3600) / 60).toString().padStart(2, '0')}
-                    </div>
-                    <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Minutos</span>
-                  </div>
-                  <span className="text-stone-900 font-bold text-2xl sm:text-3xl -mt-4 sm:-mt-5 animate-pulse">:</span>
-                  {/* SEGUNDOS */}
-                  <div className="flex flex-col items-center">
-                    <div className="bg-stone-900 text-white font-mono font-bold text-2xl sm:text-4xl min-w-[50px] sm:min-w-[70px] text-center px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-lg shadow-inner shadow-black/50 tracking-tighter">
-                      {(timeLeft % 60).toString().padStart(2, '0')}
-                    </div>
-                    <span className="text-[11px] sm:text-xs text-stone-600 font-bold uppercase tracking-wider mt-1">Segundos</span>
-                  </div>
-                </div>
-              </div>
-              
-              <p className="mt-6 text-sm sm:text-base text-stone-500 font-medium">
-                🔒 Pago 100% seguro. Acceso inmediato al finalizar tu orden.
-              </p>
-            </div>
+          {/* Tarjeta Unificada del Producto */}
+          <div className="bg-white rounded-[18px] border border-[#E8D5B7] p-6 sm:p-7 shadow-xs text-left space-y-5">
             
-            {/* TEXTO DEBAJO DE LA OFERTA */}
-            <p className="max-w-2xl text-lg sm:text-xl leading-[1.75] text-[#212121] font-serif md:text-2xl text-balance">
-              La decisión es tuya. Puedes seguir despertando mañana con el mismo dolor articular y la misma frustración frente al espejo... O puedes unirte a las mujeres que ya están usando la medicina de la tierra.
+            {/* Mockup y Título Principal */}
+            <div className="flex flex-col sm:flex-row items-center gap-5 pb-2 border-b border-[#E8D5B7]/60">
+              <img
+                src={MOCKUP_BOOK}
+                alt="Cuaderno 100 Recetas de la Abuela Para Sanar"
+                className="w-36 sm:w-44 shrink-0 object-contain drop-shadow-md"
+              />
+              <div className="text-center sm:text-left space-y-1.5">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF9F6] border border-[#E8D5B7] text-[13px] font-semibold text-[#4A7C59]">
+                  📱 Formato Digital Interactivo
+                </span>
+                <h3 className="font-poppins font-semibold text-[20px] sm:text-[23px] text-[#2C3E50] leading-snug">
+                  Libro Digital "100 Recetas de la Abuela"
+                </h3>
+                <p className="font-lato font-normal text-[15px] sm:text-[16px] text-[#2C3E50]/75">
+                  110 páginas en formato PDF de alta calidad, listo para leer en tu celular o imprimir.
+                </p>
+              </div>
+            </div>
+
+            {/* Puntos destacados del contenido */}
+            <div className="space-y-3 pt-1 text-[16px] sm:text-[17px] text-[#2C3E50] font-lato font-normal">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-[#4A7C59] shrink-0 mt-0.5" />
+                <span><strong>100 recetas e infusiones naturales:</strong> soluciones probadas para la inflamación, articulaciones y descanso.</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-[#4A7C59] shrink-0 mt-0.5" />
+                <span><strong>Medidas caseras exactas:</strong> explicadas con cucharas, tazas y pizcas para que no te compliques con balanzas.</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-[#4A7C59] shrink-0 mt-0.5" />
+                <span><strong>Acceso de por vida:</strong> descárgalo una vez y consérvalo para siempre en tus dispositivos.</span>
+              </div>
+            </div>
+
+            {/* Bloque de Precio y Descuento: Montserrat 32-40px mobile / 40-48px desktop / Bold 700 */}
+            <div className="pt-4 border-t border-[#E8D5B7]/60 text-center sm:text-left flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+              <div>
+                <p className="text-[14px] sm:text-[15px] text-[#2C3E50]/60 line-through font-medium">
+                  Precio regular: $19 USD
+                </p>
+                <div>
+                  <span className="block font-montserrat font-bold text-[36px] sm:text-[44px] text-[#4A7C59] leading-tight whitespace-nowrap">
+                    $7 USD
+                  </span>
+                  <span className="inline-block text-[13px] sm:text-[14px] font-bold text-[#D4A843] uppercase tracking-wide whitespace-nowrap">
+                    (63% de descuento)
+                  </span>
+                </div>
+                {geo.currentPriceFormatted && geo.currencyCode !== "USD" && (
+                  <p className="text-[15px] sm:text-[16px] font-bold text-[#2C3E50] mt-1 whitespace-nowrap">
+                    Equivalente aprox: <span className="font-montserrat font-bold">{geo.currentPriceFormatted}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="text-center sm:text-right text-[14px] text-[#2C3E50]/80">
+                <p className="font-semibold text-[#4A7C59] flex items-center justify-center sm:justify-end gap-1 whitespace-nowrap">
+                  <span>⚡ Descarga Inmediata</span>
+                </p>
+                <p className="text-[13px] text-[#2C3E50]/70 whitespace-nowrap">
+                  Llega a tu correo y teléfono al instante
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          {/* BOTÓN CTA #2: Open Sans 16px mobile / 16-18px desktop / Bold 700 */}
+          <div className="pt-2 space-y-3">
+            <a
+              href={HOTMART_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackCheckoutClick("Botón (Oferta Detallada)")}
+              className="inline-flex w-full items-center justify-center gap-2 bg-[#4A7C59] hover:bg-[#3D684A] text-white font-opensans font-bold text-[16px] sm:text-[18px] min-h-[56px] py-4 px-6 rounded-[14px] shadow-md shadow-[#4A7C59]/25 transition-transform active:scale-[0.98] text-center"
+            >
+              <span>SÍ, QUIERO MI CUADERNO – ACCEDER POR $7 USD →</span>
+            </a>
+            
+            <p className="text-[14px] text-[#2C3E50]/70 flex items-center justify-center gap-1.5">
+              <span>🔒 Pago 100% seguro y encriptado</span>
+              <span>·</span>
+              <span>Garantía de 7 días</span>
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      {/* SECCIÓN 7: GARANTÍA SIN RIESGO */}
+      <section className="px-4 py-10 sm:px-6 sm:py-14 max-w-2xl mx-auto w-full">
+        <div className="rounded-[16px] p-6 sm:p-7 bg-white border border-[#A8C99A]/50 shadow-xs space-y-3 text-center sm:text-left flex flex-col sm:flex-row items-center gap-5">
+          <div className="w-16 h-16 rounded-[14px] bg-[#A8C99A]/20 text-[#4A7C59] flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-10 h-10" />
+          </div>
+          <div>
+            <h2 className="font-poppins font-semibold text-[22px] sm:text-[26px] text-[#2C3E50] leading-snug mb-1.5">
+              <span className="block">GARANTÍA INCONDICIONAL</span>
+              <span className="block text-[#4A7C59]">DE 7 DÍAS</span>
+            </h2>
+            <p className="font-lato font-normal text-[16px] sm:text-[18px] leading-relaxed text-[#2C3E50]">
+              Si en 7 días no sientes que tus rodillas, tu digestión o tu descanso mejoran, mandas un mensaje y te devolvemos el 100% de tu dinero. Sin preguntas y sin complicaciones. Tu compra está 100% protegida.
             </p>
           </div>
         </div>
       </section>
+
+      {/* SECCIÓN 8: PREGUNTAS FRECUENTES CLAVE (Español neutro) */}
+      <section className="bg-white/90 border-y border-[#E8D5B7] px-4 py-10 sm:px-6 sm:py-14">
+        <div className="max-w-2xl mx-auto space-y-5">
+          
+          <h2 className="font-poppins font-semibold text-[22px] sm:text-[26px] text-center text-[#2C3E50] leading-tight mb-6">
+            Preguntas Frecuentes
+          </h2>
+
+          <div className="space-y-4 text-[16px] sm:text-[18px] leading-relaxed text-[#2C3E50] font-lato">
+            
+            <div className="p-4 rounded-[12px] bg-[#FAF9F6] border border-[#E8D5B7]">
+              <p className="font-poppins font-semibold text-[17px] sm:text-[18px] text-[#2C3E50] mb-1">❓ ¿Necesito experiencia previa?</p>
+              <p className="font-lato font-normal text-[#2C3E50]/90">→ No, está diseñado paso a paso con medidas caseras para que cualquier persona lo prepare fácilmente.</p>
+            </div>
+
+            <div className="p-4 rounded-[12px] bg-[#FAF9F6] border border-[#E8D5B7]">
+              <p className="font-poppins font-semibold text-[17px] sm:text-[18px] text-[#2C3E50] mb-1">❓ ¿Cuánto tiempo necesito dedicarle?</p>
+              <p className="font-lato font-normal text-[#2C3E50]/90">→ Solo 10 a 15 minutos al día con ingredientes que ya tienes en casa.</p>
+            </div>
+
+            <div className="p-4 rounded-[12px] bg-[#FAF9F6] border border-[#E8D5B7]">
+              <p className="font-poppins font-semibold text-[17px] sm:text-[18px] text-[#2C3E50] mb-1">❓ ¿Funciona si tengo más de 50 o 60 años?</p>
+              <p className="font-lato font-normal text-[#2C3E50]/90">→ Sí, la gran mayoría de nuestras lectoras tienen más de 45 años. Está hecho para que sea muy cómodo y sin forzar la vista.</p>
+            </div>
+
+            <div className="p-4 rounded-[12px] bg-[#FAF9F6] border border-[#E8D5B7]">
+              <p className="font-poppins font-semibold text-[17px] sm:text-[18px] text-[#2C3E50] mb-1">❓ ¿Cómo recibo el producto?</p>
+              <p className="font-lato font-normal text-[#2C3E50]/90">→ Acceso inmediato por correo electrónico y WhatsApp tras la compra. Lo tocas y se abre como una foto larga en tu celular.</p>
+            </div>
+
+            <div className="p-4 rounded-[12px] bg-[#FAF9F6] border border-[#E8D5B7]">
+              <p className="font-poppins font-semibold text-[17px] sm:text-[18px] text-[#2C3E50] mb-1">❓ ¿Puedo hacer preguntas si tengo dudas?</p>
+              <p className="font-lato font-normal text-[#2C3E50]/90">→ Sí, tienes soporte directo por WhatsApp incluido para ayudarte en todo momento.</p>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* SECCIÓN 9: CTA FINAL CON URGENCIA */}
+      <footer className="px-4 py-10 sm:px-6 sm:py-16 text-center max-w-2xl mx-auto w-full space-y-6">
+        
+        {/* Contador de Urgencia */}
+        <div className="p-4 rounded-[14px] bg-white border border-[#E8D5B7] max-w-md mx-auto shadow-xs">
+          <p className="text-red-700 font-bold text-[13px] sm:text-[15px] uppercase mb-2 flex items-center justify-center gap-1.5 whitespace-nowrap">
+            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-red-600 animate-ping shrink-0" />
+            <span>⏰ OFERTA POR TIEMPO LIMITADO</span>
+          </p>
+          <div className="flex justify-center items-center gap-3 font-mono font-bold text-2xl text-[#2C3E50]">
+            <div className="bg-[#2C3E50] text-white px-3 py-1.5 rounded-[8px]">
+              {Math.floor(timeLeft / 60).toString().padStart(2, "0")}
+            </div>
+            <span>:</span>
+            <div className="bg-[#2C3E50] text-white px-3 py-1.5 rounded-[8px]">
+              {(timeLeft % 60).toString().padStart(2, "0")}
+            </div>
+          </div>
+          <p className="text-[14px] text-[#2C3E50]/70 mt-2">
+            El precio vuelve a $19 USD al finalizar el contador
+          </p>
+        </div>
+
+        <p className="font-poppins font-semibold text-[20px] sm:text-[24px] text-[#2C3E50] leading-tight">
+          Únete a las mujeres que ya transformaron sus mañanas y apagaron el dolor.
+        </p>
+
+        {/* BOTÓN CTA #3: Open Sans 16px mobile / 16-18px desktop / Bold 700 */}
+        <div>
+          <a
+            href={HOTMART_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackCheckoutClick("Botón (Cierre Final)")}
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-[#4A7C59] hover:bg-[#3D684A] text-white font-opensans font-bold text-[16px] sm:text-[18px] min-h-[56px] py-4 px-8 rounded-[12px] shadow-md shadow-[#4A7C59]/25 transition-transform active:scale-[0.98] text-center"
+          >
+            <span>SÍ, QUIERO EMPEZAR HOY →</span>
+          </a>
+        </div>
+
+        <div className="pt-4 border-t border-[#E8D5B7]">
+          <p className="italic text-[18px] sm:text-[19px]">
+            Un abrazo fuerte, hija. Cuídate mucho.
+          </p>
+          <p className="font-bold text-[#4A7C59] text-[19px] sm:text-[20px] mt-1">
+            — Griselda, tu Abuela Tulun
+          </p>
+        </div>
+
+        <p className="pt-4 text-[13px] text-[#2C3E50]/60">
+          © {new Date().getFullYear()} Abuela Tulun · Todos los derechos reservados
+        </p>
+
+      </footer>
+
+      {/* BOTÓN FLOTANTE DE WHATSAPP DIRECTO */}
+      <aside aria-label="Contacto por WhatsApp" className="fixed bottom-4 right-4 z-50">
+        <a
+          href={WHATSAPP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 bg-[#4A7C59] hover:bg-[#3D684A] text-white px-4 py-3 rounded-full shadow-lg shadow-black/20 font-opensans font-bold text-[15px] sm:text-[16px] transition-transform hover:scale-105 active:scale-95"
+        >
+          <MessageCircle className="w-5 h-5 fill-current" />
+          <span className="hidden sm:inline">¿Dudas? Escríbeme</span>
+        </a>
+      </aside>
+
     </div>
   );
 }
