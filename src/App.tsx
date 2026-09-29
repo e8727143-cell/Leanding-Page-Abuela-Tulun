@@ -171,23 +171,52 @@ export default function App() {
             </p>
           </div>
 
-          {/* Testimonios escritos naturales con nombre completo */}
-          <div className="grid gap-3 pt-1">
-            <div className="p-4 sm:p-5 rounded-[14px] bg-[#FAF9F6] border border-[#E8D5B7]">
-              <p className="text-[16px] sm:text-[17px] italic text-[#2C3E50] leading-relaxed">
-                “Jamás pensé que funcionaría tan bien para mí. Con el té de banana y canela dormí 7 horas seguidas por primera vez en años.”
-              </p>
-              <p className="mt-2 font-bold text-[15px] text-[#4A7C59]">
-                — Carmen Rodríguez, de Medellín
-              </p>
+          {/* Testimonios escritos naturales con foto de cada señora */}
+          <div className="grid gap-3.5 pt-1">
+            <div className="p-4 sm:p-5 rounded-[16px] bg-[#FAF9F6] border border-[#E8D5B7] shadow-sm">
+              <div className="flex items-start gap-3.5">
+                <img
+                  src="https://res.cloudinary.com/nudnxkcm/image/upload/v1789688454/Woman_taking_spontaneous_selfie_20260917203407.jpg"
+                  alt="Carmen Rodríguez, de Medellín"
+                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-[#4A7C59]/40 shadow-sm shrink-0"
+                  referrerPolicy="no-referrer"
+                  loading="lazy"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex text-amber-500 text-[13px] mb-1 tracking-widest" aria-label="5 estrellas">
+                    ★★★★★
+                  </div>
+                  <p className="text-[16px] sm:text-[17px] italic text-[#2C3E50] leading-relaxed">
+                    “Jamás pensé que funcionaría tan bien para mí. Con el té de banana y canela dormí 7 horas seguidas por primera vez en años.”
+                  </p>
+                  <p className="mt-2 font-bold text-[15px] text-[#4A7C59]">
+                    — Carmen Rodríguez, de Medellín
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="p-4 sm:p-5 rounded-[14px] bg-[#FAF9F6] border border-[#E8D5B7]">
-              <p className="text-[16px] sm:text-[17px] italic text-[#2C3E50] leading-relaxed">
-                “Lo mejor que compré este año. Todo se prepara con lo que una ya tiene en la cocina.”
-              </p>
-              <p className="mt-2 font-bold text-[15px] text-[#4A7C59]">
-                — Teresa Morales, de Puebla
-              </p>
+
+            <div className="p-4 sm:p-5 rounded-[16px] bg-[#FAF9F6] border border-[#E8D5B7] shadow-sm">
+              <div className="flex items-start gap-3.5">
+                <img
+                  src="https://res.cloudinary.com/nudnxkcm/image/upload/v1789688455/Woman_taking_profile_selfie_20260917202911.jpg"
+                  alt="Teresa Morales, de Puebla"
+                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-[#4A7C59]/40 shadow-sm shrink-0"
+                  referrerPolicy="no-referrer"
+                  loading="lazy"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex text-amber-500 text-[13px] mb-1 tracking-widest" aria-label="5 estrellas">
+                    ★★★★★
+                  </div>
+                  <p className="text-[16px] sm:text-[17px] italic text-[#2C3E50] leading-relaxed">
+                    “Lo mejor que compré este año. Todo se prepara con lo que una ya tiene en la cocina.”
+                  </p>
+                  <p className="mt-2 font-bold text-[15px] text-[#4A7C59]">
+                    — Teresa Morales, de Puebla
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
