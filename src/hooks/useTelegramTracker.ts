@@ -40,28 +40,34 @@ export function isMobileOrTabletDevice(): boolean {
   return false;
 }
 
+function createUniqueSessionId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "sess_" + Date.now() + "_" + Math.random().toString(36).substring(2, 11);
+}
+
 /**
- * Obtiene o genera un sessionId único y persistente para el visitante.
- * Utiliza crypto.randomUUID() con fallback seguro para navegadores antiguos,
- * y lo almacena en localStorage (o sessionStorage) para que se mantenga si recarga la página.
+ * Obtiene o genera un sessionId único para la visita actual.
+ * Limpia el localStorage legado para evitar que un mismo teléfono quede atrapado en Usuario 1.
+ * Utiliza sessionStorage para que cada nueva visita o pestaña reciba una sesión propia.
  */
 function getOrCreateSessionId(): string {
   if (typeof window === "undefined") return "session_init";
   try {
-    const STORAGE_KEY = "tg_session_id";
-    let sessionId = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
+    // Limpieza obligatoria de llaves legadas en localStorage
+    localStorage.removeItem("tg_session_id");
+    localStorage.removeItem("tg_user_number");
+
+    const STORAGE_KEY = "tg_visit_session_id";
+    let sessionId = sessionStorage.getItem(STORAGE_KEY);
     if (!sessionId) {
-      if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-        sessionId = crypto.randomUUID();
-      } else {
-        sessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).substring(2, 11);
-      }
-      localStorage.setItem(STORAGE_KEY, sessionId);
+      sessionId = createUniqueSessionId();
       sessionStorage.setItem(STORAGE_KEY, sessionId);
     }
     return sessionId;
   } catch {
-    return "sess_" + Date.now();
+    return createUniqueSessionId();
   }
 }
 
@@ -206,6 +212,12 @@ export function useTelegramTracker(countryName: string) {
         },
         true
       );
+
+      try {
+        sessionStorage.removeItem("tg_visit_session_id");
+        sessionStorage.removeItem("tg_visit_sent");
+        sessionStorage.removeItem("tg_user_number");
+      } catch {}
     };
 
     window.addEventListener("pagehide", handleLeave);
@@ -243,6 +255,11 @@ export function useTelegramTracker(countryName: string) {
         },
         true
       );
+      try {
+        sessionStorage.removeItem("tg_visit_session_id");
+        sessionStorage.removeItem("tg_visit_sent");
+        sessionStorage.removeItem("tg_user_number");
+      } catch {}
     }
   };
 

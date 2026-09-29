@@ -190,7 +190,10 @@ export default async function handler(req: any, res: any) {
     const stats = loadDailyStats();
     if (type === "visit") {
       stats.visitors += 1;
-      if (activeUserNumber === null || activeUserNumber === 0) {
+      if (activeUserNumber !== null && activeUserNumber > 0) {
+        activeUserNumber = Math.max(activeUserNumber, stats.visitors);
+        stats.visitors = activeUserNumber;
+      } else {
         activeUserNumber = stats.visitors;
       }
       const validCountry = country && country !== "Desconocido" ? country : "Otros";
